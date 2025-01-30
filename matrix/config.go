@@ -1,71 +1,38 @@
 package matrix
 
 import (
-	"fmt"
-	"gotify_matrix_bot/config"
+	"context"
+
 	"maunium.net/go/mautrix"
 	"maunium.net/go/mautrix/crypto"
 	"maunium.net/go/mautrix/event"
 	"maunium.net/go/mautrix/id"
-	"strings"
 )
 
 type FakeStateStore struct{}
 
 var _ crypto.StateStore = &FakeStateStore{}
 
-func (fss *FakeStateStore) IsEncrypted(roomID id.RoomID) bool {
-	return true
+func (fss *FakeStateStore) IsEncrypted(ctx context.Context, roomID id.RoomID) (bool, error) {
+	return true, nil
 }
 
-func (fss *FakeStateStore) GetEncryptionEvent(roomID id.RoomID) *event.EncryptionEventContent {
+func (fss *FakeStateStore) GetEncryptionEvent(ctx context.Context, roomID id.RoomID) (*event.EncryptionEventContent, error) {
 	return &event.EncryptionEventContent{
 		Algorithm:              id.AlgorithmMegolmV1,
 		RotationPeriodMillis:   7 * 24 * 60 * 60 * 1000,
 		RotationPeriodMessages: 100,
-	}
+	}, nil
 }
 
-func (fss *FakeStateStore) FindSharedRooms(userID id.UserID) []id.RoomID {
-	return []id.RoomID{}
-}
-
-// Simple crypto.Logger implementation that prints to stdout.
-type Logger struct{}
-
-var _ crypto.Logger = &Logger{}
-
-func (f Logger) Error(message string, args ...interface{}) {
-	fmt.Printf("[ERROR] "+message+"\n", args...)
-}
-
-func (f Logger) Warn(message string, args ...interface{}) {
-	fmt.Printf("[WARN] "+message+"\n", args...)
-}
-
-func (f Logger) Debug(message string, args ...interface{}) {
-	if !config.Configuration.Debug {
-		return
-	}
-
-	fmt.Printf("[DEBUG] "+message+"\n", args...)
-}
-
-func (f Logger) Trace(message string, args ...interface{}) {
-	if !config.Configuration.Debug {
-		return
-	}
-
-	if strings.HasPrefix(message, "Got membership state event") {
-		return
-	}
-	fmt.Printf("[TRACE] "+message+"\n", args...)
+func (fss *FakeStateStore) FindSharedRooms(ctx context.Context, userID id.UserID) ([]id.RoomID, error) {
+	return []id.RoomID{}, nil
 }
 
 // Easy way to get room members (to find out who to share keys to).
 // In real apps, you should cache the member list somewhere and update it based on m.room.member events.
-func getUserIDs(cli *mautrix.Client, roomID id.RoomID) []id.UserID {
-	members, err := cli.JoinedMembers(roomID)
+func getUserIDs(ctx context.Context, cli *mautrix.Client, roomID id.RoomID) []id.UserID {
+	members, err := cli.JoinedMembers(ctx, roomID)
 	if err != nil {
 		panic(err)
 	}
