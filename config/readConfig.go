@@ -1,8 +1,8 @@
 package config
 
 import (
-	"io/ioutil"
 	"log"
+	"os"
 	"strings"
 
 	"gopkg.in/yaml.v3"
@@ -25,7 +25,7 @@ type Config struct {
 }
 
 func readConf() *Config {
-	buf, err := ioutil.ReadFile("./config.yaml")
+	buf, err := os.ReadFile("./config.yaml")
 	if err != nil {
 		log.Fatal("Could not load config. ", err)
 	}
@@ -48,6 +48,9 @@ func readConf() *Config {
 	if !strings.HasPrefix(c.Gotify.URL, "ws") {
 		c.Gotify.URL = "wss://" + c.Gotify.URL
 	}
+
+	checkValues(c)
+
 	return c
 }
 
