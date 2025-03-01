@@ -82,8 +82,4 @@ func checkValues(config *Config) {
 		log.Fatal("No matrix room id specified.")
 	}
 
-	if !config.Matrix.Encrypted {
-		log.Fatal("No encryption specified. Please use true or false")
-	}
-
 }
