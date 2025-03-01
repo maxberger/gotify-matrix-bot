@@ -20,7 +20,7 @@ func MainLoop() {
 		config.Configuration.Matrix.Encrypted,
 	)
 
-	gotify_messages.OnNewMessage(func(message string) {
+	gotify_messages.OnNewMessage(func(message []byte) {
 		matrix.SendMessage(
 			matrixConnection,
 			config.Configuration.Matrix.RoomID,

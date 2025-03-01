@@ -9,7 +9,7 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-type callbackFunction func(string)
+type callbackFunction func([]byte)
 
 func OnNewMessage(callback callbackFunction) {
 
@@ -36,7 +36,7 @@ func OnNewMessage(callback callbackFunction) {
 				log.Fatal().Err(err).Msg("The websocket connection to gotify returned an error.")
 			}
 
-			callback(string(message))
+			callback(message)
 
 		}
 	}()

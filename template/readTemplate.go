@@ -13,14 +13,14 @@ type Message struct {
 	Message string `json:"message"`
 }
 
-func GetFormattedMessageString(message string) string {
+func GetFormattedMessageString(message []byte) string {
 
 	var m Message
 
-	err := json.Unmarshal([]byte(message), &m)
+	err := json.Unmarshal(message, &m)
 	if err != nil {
-		log.Error().Err(err).Msgf("Could not parse message from: %s", message)
-		return "Could not parse message from: " + message
+		log.Error().Err(err).Msgf("Could not parse message from: %s", string(message))
+		return "Could not parse message from: " + string(message)
 	}
 
 	templateString, err := os.ReadFile("messageTamplate.md")
