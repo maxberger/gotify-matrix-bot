@@ -35,9 +35,8 @@ func OnNewMessage(callback callbackFunction) {
 			if err != nil {
 				log.Fatal().Err(err).Msg("The websocket connection to gotify returned an error.")
 			}
-
+			log.Debug().Msgf("Received message from gotify: %s", string(message))
 			callback(message)
-
 		}
 	}()
 
