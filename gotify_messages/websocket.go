@@ -29,6 +29,7 @@ func OnNewMessage(callback callbackFunction) {
 
 	go func() {
 		defer close(done)
+		log.Info().Msg("Connected to Gotify server.")
 		for {
 			_, message, err := c.ReadMessage()
 			if err != nil {

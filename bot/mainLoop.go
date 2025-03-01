@@ -10,7 +10,7 @@ import (
 )
 
 func MainLoop() {
-	log.Info().Msgf("Starting main loop; encryption active: %t", config.Configuration.Matrix.Encrypted)
+	log.Info().Msg("Starting main loop...")
 
 	matrixConnection := matrix.Connect(
 		config.Configuration.Matrix.HomeServerURL,

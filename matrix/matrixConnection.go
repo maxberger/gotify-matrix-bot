@@ -10,6 +10,7 @@ import (
 	"maunium.net/go/mautrix"
 	"maunium.net/go/mautrix/crypto"
 	"maunium.net/go/mautrix/event"
+	"maunium.net/go/mautrix/format"
 	"maunium.net/go/mautrix/id"
 )
 
@@ -70,6 +71,8 @@ func Connect(
 		}
 	}()
 
+	log.Info().Msgf("Connected to Matrix. Encryption active: %t", encrypted)
+
 	return &state{
 		isEncrypted:   encrypted,
 		matrixContext: ctx,
@@ -79,21 +82,61 @@ func Connect(
 }
 
 func SendMessage(state *state, roomID string, message string) {
-	var err error
+	matrixRoomId := id.RoomID(roomID)
+
+	log.Info().Msg("Sending new message")
+	log.Debug().Msgf("Message: %s", message)
+	log.Debug().Msgf("Room ID: %s", matrixRoomId)
+
+	content := format.RenderMarkdown(message, true, true)
+
+	var eventType event.Type
+	var eventContent any
+
 	if state.isEncrypted {
-		err = SendEncrypted(
+		encryptedContent, err := state.olmMachine.EncryptMegolmEvent(
 			state.matrixContext,
-			state.olmMachine,
-			state.matrixClient,
-			id.RoomID(roomID),
-			message)
+			matrixRoomId,
+			event.EventMessage,
+			content)
+		// These three errors mean we have to make a new Megolm session
+		if err == crypto.SessionExpired || err == crypto.SessionNotShared || err == crypto.NoGroupSession {
+			log.Debug().Msg("Creating new Megolm session")
+			err = state.olmMachine.ShareGroupSession(
+				state.matrixContext,
+				matrixRoomId,
+				getUserIDs(state.matrixContext, state.matrixClient, matrixRoomId))
+			if err != nil {
+				log.Fatal().Err(err).Msg("Could not share group session.")
+				return
+			}
+			encryptedContent, err = state.olmMachine.EncryptMegolmEvent(
+				state.matrixContext,
+				matrixRoomId,
+				event.EventMessage,
+				content)
+			if err != nil {
+				log.Fatal().Err(err).Msg("Could not encrypt message even after creating new Megolm session")
+				return
+			}
+		}
+		if err != nil {
+			log.Fatal().Err(err).Msg("Could not encrypt message.")
+			return
+		}
+		eventType = event.EventEncrypted
+		eventContent = encryptedContent
 	} else {
-		err = SendUnencrypted(
-			state.matrixContext,
-			state.matrixClient,
-			id.RoomID(roomID),
-			message)
+		eventType = event.EventMessage
+		eventContent = content
 	}
+
+	_, err := state.matrixClient.SendMessageEvent(
+		state.matrixContext,
+		matrixRoomId,
+		eventType,
+		eventContent)
+
 	if err != nil {
 		log.Fatal().Err(err).Msg("Could not send message to matrix.")
 	}
