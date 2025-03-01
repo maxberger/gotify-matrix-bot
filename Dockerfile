@@ -10,6 +10,9 @@ RUN go mod download
 
 RUN go build -o /gotify-matrix-bot-docker
 
+FROM builder AS run-test-stage
+RUN go test -v ./...
+
 FROM alpine:latest
 
 RUN apk add --no-cache ca-certificates olm bash
