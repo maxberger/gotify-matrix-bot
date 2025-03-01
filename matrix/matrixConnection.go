@@ -2,16 +2,15 @@ package matrix
 
 import (
 	"context"
-	"log"
 	"strings"
+
+	"github.com/rs/zerolog/log"
 
 	"go.mau.fi/util/random"
 	"maunium.net/go/mautrix"
 	"maunium.net/go/mautrix/crypto"
 	"maunium.net/go/mautrix/event"
 	"maunium.net/go/mautrix/id"
-
-	zlog "github.com/rs/zerolog/log"
 )
 
 type state struct {
@@ -44,7 +43,7 @@ func Connect(
 	if encrypted {
 		cryptoStore := crypto.NewMemoryStore(nil)
 
-		mach = crypto.NewOlmMachine(cli, &zlog.Logger, cryptoStore, &FakeStateStore{})
+		mach = crypto.NewOlmMachine(cli, &log.Logger, cryptoStore, &FakeStateStore{})
 		// Load data from the crypto store
 		err = mach.Load(ctx)
 		if err != nil {
@@ -96,7 +95,7 @@ func SendMessage(state *state, roomID string, message string) {
 			message)
 	}
 	if err != nil {
-		log.Fatal("Could not send message to matrix. ", err)
+		log.Fatal().Err(err).Msg("Could not send message to matrix.")
 	}
 
 }

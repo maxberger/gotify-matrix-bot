@@ -1,9 +1,10 @@
 package config
 
 import (
-	"log"
 	"os"
 	"strings"
+
+	"github.com/rs/zerolog/log"
 
 	"gopkg.in/yaml.v3"
 )
@@ -27,13 +28,13 @@ type Config struct {
 func readConf() *Config {
 	buf, err := os.ReadFile("./config.yaml")
 	if err != nil {
-		log.Fatal("Could not load config. ", err)
+		log.Fatal().Err(err).Msg("Could not load config.")
 	}
 
 	c := &Config{}
 	err = yaml.Unmarshal(buf, c)
 	if err != nil {
-		log.Fatal("Could not parse config. ", err)
+		log.Fatal().Err(err).Msg("Could not parse config.")
 	}
 
 	if c.Matrix.MatrixDomain == "" {
@@ -59,27 +60,27 @@ var Configuration = readConf()
 func checkValues(config *Config) {
 
 	if config.Gotify.URL == "" {
-		log.Fatal("No gotify url specified.")
+		log.Fatal().Msg("No gotify url specified.")
 	}
 
 	if config.Gotify.ApiToken == "" {
-		log.Fatal("No gotify api token specified.")
+		log.Fatal().Msg("No gotify api token specified.")
 	}
 
 	if config.Matrix.HomeServerURL == "" {
-		log.Fatal("No matrix homeserver specified.")
+		log.Fatal().Msg("No matrix homeserver specified.")
 	}
 
 	if config.Matrix.Username == "" {
-		log.Fatal("No matrix username specified.")
+		log.Fatal().Msg("No matrix username specified.")
 	}
 
 	if config.Matrix.Token == "" {
-		log.Fatal("No matrix auth token specified.")
+		log.Fatal().Msg("No matrix auth token specified.")
 	}
 
 	if config.Matrix.RoomID == "" {
-		log.Fatal("No matrix room id specified.")
+		log.Fatal().Msg("No matrix room id specified.")
 	}
 
 }

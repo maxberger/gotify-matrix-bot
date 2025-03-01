@@ -4,8 +4,8 @@ package matrix
 
 import (
 	"context"
-	"gotify_matrix_bot/config"
-	"log"
+
+	"github.com/rs/zerolog/log"
 
 	"maunium.net/go/mautrix"
 	"maunium.net/go/mautrix/crypto"
@@ -16,9 +16,7 @@ import (
 
 func SendEncrypted(ctx context.Context, mach *crypto.OlmMachine, cli *mautrix.Client, roomID id.RoomID, text string) (err error) {
 
-	if config.Configuration.Debug {
-		log.Println("Sending new encrypted message")
-	}
+	log.Debug().Msg("Sending new encrypted message")
 
 	content := format.RenderMarkdown(text, true, true)
 	encrypted, err := mach.EncryptMegolmEvent(ctx, roomID, event.EventMessage, content)
@@ -43,9 +41,7 @@ func SendEncrypted(ctx context.Context, mach *crypto.OlmMachine, cli *mautrix.Cl
 
 func SendUnencrypted(ctx context.Context, cli *mautrix.Client, roomID id.RoomID, text string) (err error) {
 
-	if config.Configuration.Debug {
-		log.Println("Sending new unencrypted message")
-	}
+	log.Debug().Msg("Sending new unencrypted message")
 
 	_, err = cli.SendMessageEvent(ctx, roomID, event.EventMessage, format.RenderMarkdown(text, true, true))
 

@@ -2,9 +2,10 @@ package template
 
 import (
 	"encoding/json"
-	"io/ioutil"
-	"log"
+	"os"
 	"strings"
+
+	"github.com/rs/zerolog/log"
 )
 
 type Message struct {
@@ -18,14 +19,14 @@ func GetFormattedMessageString(message string) string {
 
 	err := json.Unmarshal([]byte(message), &m)
 	if err != nil {
-		log.Println("[ERROR] Could not parse message from: " + message)
+		log.Error().Err(err).Msgf("Could not parse message from: %s", message)
 		return "Could not parse message from: " + message
 	}
 
-	templateString, err := ioutil.ReadFile("messageTamplate.md")
+	templateString, err := os.ReadFile("messageTamplate.md")
 
 	if err != nil {
-		log.Fatal("Could not find / read messageTamplate.md!")
+		log.Fatal().Err(err).Msg("Could not find / read messageTamplate.md!")
 	}
 
 	content := strings.ReplaceAll(string(templateString), "[TITLE]", m.Title)

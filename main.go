@@ -2,10 +2,21 @@ package main
 
 import (
 	"gotify_matrix_bot/bot"
-	"log"
+	"gotify_matrix_bot/config"
+	"os"
+
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 )
 
 func main() {
-	log.Println("The gotify matrix bot has started now.")
+	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
+	zerolog.SetGlobalLevel(zerolog.InfoLevel)
+	if config.Configuration.Debug {
+		zerolog.SetGlobalLevel(zerolog.DebugLevel)
+	}
+
+	log.Info().Msg("The gotify matrix bot has started now.")
+	log.Debug().Msg("Log level is set to debug")
 	bot.MainLoop()
 }
