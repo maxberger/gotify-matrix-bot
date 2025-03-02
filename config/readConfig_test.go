@@ -27,7 +27,9 @@ matrix:
   token: testToken
   roomID: "!roomid"
   encrypted: true
-debug: true
+logging:
+  level: debug
+  format: color
 `),
 			expected: &Config{
 				Gotify: GotifyType{
@@ -41,9 +43,9 @@ debug: true
 					MatrixDomain:  "matrix.example.com",
 					Encrypted:     true,
 				},
-				Debug: true,
 				Logging: LoggingType{
-					Level: "debug",
+					Level:  "debug",
+					Format: "color",
 				},
 			},
 			expectedError: false,

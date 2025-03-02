@@ -24,7 +24,8 @@ type MatrixType struct {
 }
 
 type LoggingType struct {
-	Level string `yaml:"level"`
+	Level  string `yaml:"level"`
+	Format string `yaml:"format"`
 }
 
 type Config struct {
@@ -119,4 +120,7 @@ func checkValues(config *Config) {
 		log.Fatal().Msg("No matrix room id specified.")
 	}
 
+	if config.Debug {
+		log.Warn().Msg("Using deprecated keyword 'debug' in config. Please use logging/level instead")
+	}
 }

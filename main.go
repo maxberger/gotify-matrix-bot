@@ -4,6 +4,7 @@ import (
 	"gotify_matrix_bot/bot"
 	"gotify_matrix_bot/config"
 	"os"
+	"strings"
 
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -19,7 +20,17 @@ func main() {
 }
 
 func setupLoggerFromConfig() {
-	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
+	switch {
+	case strings.EqualFold(config.Configuration.Logging.Format, "json"):
+		// Nothing to do, this is the default in zerolog
+	case strings.EqualFold(config.Configuration.Logging.Format, "plain") || config.Configuration.Logging.Format == "":
+		log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr, NoColor: true})
+	case strings.EqualFold(config.Configuration.Logging.Format, "color"):
+		log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr, NoColor: false})
+	default:
+		log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr, NoColor: true})
+		log.Warn().Msgf("Unknown log format %s, defaulting to plain", config.Configuration.Logging.Format)
+	}
 
 	level, err := zerolog.ParseLevel(config.Configuration.Logging.Level)
 
