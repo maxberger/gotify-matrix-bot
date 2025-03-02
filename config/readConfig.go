@@ -50,10 +50,22 @@ func parseConfig(buf []byte) *Config {
 		log.Fatal().Err(err).Msg("Could not parse config.")
 	}
 
+	return fixConfig(c)
+}
+
+func fixConfig(c *Config) *Config {
+	fixMatrixDomain(c)
+	fixGotifyURL(c)
+	return c
+}
+
+func fixMatrixDomain(c *Config) {
 	if c.Matrix.MatrixDomain == "" {
 		c.Matrix.MatrixDomain = strings.ReplaceAll(c.Matrix.HomeServerURL, "https://", "")
 	}
+}
 
+func fixGotifyURL(c *Config) {
 	// As the websocket connection for connecting to gotify is used,
 	// the scheme is replaced with the appropriate websocket scheme.
 	c.Gotify.URL = strings.ReplaceAll(c.Gotify.URL, "http://", "ws://")
@@ -62,7 +74,6 @@ func parseConfig(buf []byte) *Config {
 	if !strings.HasPrefix(c.Gotify.URL, "ws") {
 		c.Gotify.URL = "wss://" + c.Gotify.URL
 	}
-	return c
 }
 
 func checkValues(config *Config) {
