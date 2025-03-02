@@ -20,11 +20,12 @@ func MainLoop() {
 		config.Configuration.Matrix.Encrypted,
 	)
 
-	gotify_messages.OnNewMessage(func(message []byte) {
+	gotify_messages.OnNewMessage(func(rawMessage []byte) {
+		markdownMessage := template.GetFormattedMessageString(rawMessage)
+		messageWithImagesReplaced := matrix.UploadImages(matrixConnection, markdownMessage)
 		matrix.SendMessage(
 			matrixConnection,
-			config.Configuration.Matrix.RoomID,
-			template.GetFormattedMessageString(message),
+			config.Configuration.Matrix.RoomID, messageWithImagesReplaced,
 		)
 	})
 	select {}

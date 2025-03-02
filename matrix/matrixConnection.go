@@ -2,6 +2,8 @@ package matrix
 
 import (
 	"context"
+	"net/http"
+	"regexp"
 	"strings"
 
 	"github.com/rs/zerolog/log"
@@ -17,6 +19,7 @@ import (
 type MautrixClientType interface {
 	SendMessageEvent(ctx context.Context, roomID id.RoomID, eventType event.Type, content interface{}, extra ...mautrix.ReqSendEvent) (*mautrix.RespSendEvent, error)
 	JoinedMembers(ctx context.Context, roomID id.RoomID) (resp *mautrix.RespJoinedMembers, err error)
+	UploadMedia(ctx context.Context, data mautrix.ReqUploadMedia) (*mautrix.RespMediaUpload, error)
 	Sync() error
 }
 
@@ -87,15 +90,15 @@ func Connect(
 	}
 }
 
-func SendMessage(state *MatrixState, roomID string, message string) {
+func SendMessage(state *MatrixState, roomID string, markDownMessage string) {
 	matrixRoomId := id.RoomID(roomID)
 
-	log.Info().Msg("Sending new message")
-	log.Debug().Msgf("Message: %s", message)
+	log.Debug().Msg("Sending message to matrix...")
+	log.Debug().Msgf("Message as Markdown: %s", markDownMessage)
 	log.Debug().Msgf("Room ID: %s", matrixRoomId)
 
 	content := format.RenderMarkdown(
-		message,
+		markDownMessage,
 		/*allowMarkdown = */ true,
 		/*allowHTML = */ false)
 
@@ -150,4 +153,43 @@ func SendMessage(state *MatrixState, roomID string, message string) {
 		log.Fatal().Err(err).Msg("Could not send message to matrix.")
 	}
 
+}
+
+var imageRegexp *regexp.Regexp = regexp.MustCompile(`\!\[\]\(http.*?\)`)
+
+func UploadImages(state *MatrixState, markDownMessage string) string {
+	leftMost := 0
+	for loc := imageRegexp.FindStringIndex(markDownMessage[leftMost:]); loc != nil; loc = imageRegexp.FindStringIndex(markDownMessage) {
+		index := loc[0] + leftMost
+		end := loc[1] + leftMost
+		leftMost = index + 1
+		url := markDownMessage[index+4 : end-1]
+
+		log.Debug().Msgf("Downloading image from %s", url)
+		downloadRespose, err := http.Get(url)
+
+		if err != nil {
+			log.Warn().Err(err).Msgf("Failed to download %s", url)
+		}
+
+		contentType := downloadRespose.Header.Get("Content-Type")
+		contentLength := downloadRespose.ContentLength
+
+		log.Debug().Msgf("Found image of type %s with length %d", contentType, contentLength)
+
+		resp, err := state.MautrixClient.UploadMedia(state.MatrixContext, mautrix.ReqUploadMedia{
+			Content:       downloadRespose.Body,
+			ContentLength: contentLength,
+			ContentType:   contentType,
+		})
+		if err != nil {
+			log.Warn().Err(err).Msg("Failed to upload image")
+		}
+		newUrl := resp.ContentURI.CUString()
+		log.Debug().Msgf("Image was stored as %s", newUrl)
+
+		replacement := "![](" + newUrl + ")"
+		markDownMessage = markDownMessage[:index] + string(replacement) + markDownMessage[end:]
+	}
+	return markDownMessage
 }

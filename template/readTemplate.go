@@ -9,6 +9,8 @@ import (
 )
 
 type Message struct {
+	Id      int64  `json:"id"`
+	AppId   int64  `json:"appid"`
 	Title   string `json:"title"`
 	Message string `json:"message"`
 	Extras  struct {
@@ -27,6 +29,7 @@ func GetFormattedMessageString(message []byte) string {
 		log.Error().Err(err).Msgf("Could not parse message from: %s", string(message))
 		return "Could not parse message from: " + string(message)
 	}
+	log.Info().Msgf("Forwarding message %d/%d with Title %s", m.AppId, m.Id, m.Title)
 
 	contentType := strings.ToLower(strings.TrimSpace(m.Extras.ClientDisplay.ContentType))
 
