@@ -9,11 +9,13 @@ require (
 	github.com/rs/zerolog v1.33.0
 	go.mau.fi/util v0.8.4
 	gopkg.in/yaml.v3 v3.0.1
+	gotest.tools/v3 v3.5.2
 	maunium.net/go/mautrix v0.23.0
 )
 
 require (
 	filippo.io/edwards25519 v1.1.0 // indirect
+	github.com/google/go-cmp v0.6.0 // indirect
 	github.com/mattn/go-colorable v0.1.14 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/petermattis/goid v0.0.0-20241211131331-93ee7e083c43 // indirect

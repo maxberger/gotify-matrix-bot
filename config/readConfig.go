@@ -9,30 +9,43 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-type Config struct {
-	Gotify struct {
-		URL      string `yaml:"url"`
-		ApiToken string `yaml:"apiToken"`
-	}
-	Matrix struct {
-		HomeServerURL string `yaml:"homeserverURL"`
-		MatrixDomain  string `yaml:"matrixDomain"`
-		Username      string `yaml:"username"`
-		Token         string `yaml:"token"`
-		RoomID        string `yaml:"roomID"`
-		Encrypted     bool   `yaml:"encrypted"`
-	}
-	Debug bool `yaml:"debug"`
+type GotifyType struct {
+	URL      string `yaml:"url"`
+	ApiToken string `yaml:"apiToken"`
 }
 
-func readConf() *Config {
+type MatrixType struct {
+	HomeServerURL string `yaml:"homeserverURL"`
+	MatrixDomain  string `yaml:"matrixDomain"`
+	Username      string `yaml:"username"`
+	Token         string `yaml:"token"`
+	RoomID        string `yaml:"roomID"`
+	Encrypted     bool   `yaml:"encrypted"`
+}
+type Config struct {
+	Gotify GotifyType
+	Matrix MatrixType
+	Debug  bool `yaml:"debug"`
+}
+
+var Configuration *Config = nil
+
+func LoadConfig() {
 	buf, err := os.ReadFile("./config.yaml")
 	if err != nil {
 		log.Fatal().Err(err).Msg("Could not load config.")
 	}
+	Configuration = parseConfig(buf)
+}
+
+func ValidateConfig() {
+	checkValues(Configuration)
+}
+
+func parseConfig(buf []byte) *Config {
 
 	c := &Config{}
-	err = yaml.Unmarshal(buf, c)
+	err := yaml.Unmarshal(buf, c)
 	if err != nil {
 		log.Fatal().Err(err).Msg("Could not parse config.")
 	}
@@ -49,13 +62,8 @@ func readConf() *Config {
 	if !strings.HasPrefix(c.Gotify.URL, "ws") {
 		c.Gotify.URL = "wss://" + c.Gotify.URL
 	}
-
-	checkValues(c)
-
 	return c
 }
-
-var Configuration = readConf()
 
 func checkValues(config *Config) {
 
