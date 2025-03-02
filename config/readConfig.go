@@ -22,10 +22,17 @@ type MatrixType struct {
 	RoomID        string `yaml:"roomID"`
 	Encrypted     bool   `yaml:"encrypted"`
 }
+
+type LoggingType struct {
+	Level string `yaml:"level"`
+}
+
 type Config struct {
-	Gotify GotifyType
-	Matrix MatrixType
-	Debug  bool `yaml:"debug"`
+	Gotify  GotifyType
+	Matrix  MatrixType
+	Logging LoggingType
+	// Deprecated: Use Logging instead
+	Debug bool `yaml:"debug"`
 }
 
 var Configuration *Config = nil
@@ -56,6 +63,7 @@ func parseConfig(buf []byte) *Config {
 func fixConfig(c *Config) *Config {
 	fixMatrixDomain(c)
 	fixGotifyURL(c)
+	fixLoggingLevel(c)
 	return c
 }
 
@@ -73,6 +81,15 @@ func fixGotifyURL(c *Config) {
 	// set default wss scheme for backward compatibility
 	if !strings.HasPrefix(c.Gotify.URL, "ws") {
 		c.Gotify.URL = "wss://" + c.Gotify.URL
+	}
+}
+
+func fixLoggingLevel(c *Config) {
+	if c.Debug {
+		c.Logging.Level = "debug"
+	}
+	if c.Logging.Level == "" {
+		c.Logging.Level = "info"
 	}
 }
 

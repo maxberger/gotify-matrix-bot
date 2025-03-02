@@ -42,6 +42,9 @@ debug: true
 					Encrypted:     true,
 				},
 				Debug: true,
+				Logging: LoggingType{
+					Level: "debug",
+				},
 			},
 			expectedError: false,
 		},
@@ -73,6 +76,39 @@ debug: true
 					Encrypted:     true,
 				},
 				Debug: true,
+				Logging: LoggingType{
+					Level: "debug",
+				},
+			},
+			expectedError: false,
+		},
+		{
+			name: "Debug sets level if unset",
+			config: []byte(`
+debug: true
+`),
+			expected: &Config{
+				Gotify: GotifyType{
+					URL: "wss://",
+				},
+				Debug: true,
+				Logging: LoggingType{
+					Level: "debug",
+				},
+			},
+			expectedError: false,
+		},
+		{
+			name: "Log level defaults to info",
+			config: []byte(`
+`),
+			expected: &Config{
+				Gotify: GotifyType{
+					URL: "wss://",
+				},
+				Logging: LoggingType{
+					Level: "info",
+				},
 			},
 			expectedError: false,
 		},

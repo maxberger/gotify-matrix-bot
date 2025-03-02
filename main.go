@@ -11,14 +11,24 @@ import (
 
 func main() {
 	config.LoadConfig()
-	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
-	zerolog.SetGlobalLevel(zerolog.InfoLevel)
-	if config.Configuration.Debug {
-		zerolog.SetGlobalLevel(zerolog.DebugLevel)
-	}
+	setupLoggerFromConfig()
 	config.ValidateConfig()
 
 	log.Info().Msg("The gotify matrix bot has started now.")
-	log.Debug().Msg("Log level is set to debug")
 	bot.MainLoop()
+}
+
+func setupLoggerFromConfig() {
+	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
+
+	level, err := zerolog.ParseLevel(config.Configuration.Logging.Level)
+
+	if err != nil {
+		zerolog.SetGlobalLevel(zerolog.InfoLevel)
+		log.Warn().Msgf("Unknown log level %s, defaulting to info", config.Configuration.Logging.Level)
+	} else {
+		zerolog.SetGlobalLevel(level)
+		log.Debug().Msgf("Log level set to %s", level)
+	}
+
 }
