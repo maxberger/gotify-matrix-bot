@@ -31,6 +31,24 @@ func TestGetFormattedMessageString(t *testing.T) {
 			expected:      "### \n\n\n",
 			expectedError: false,
 		},
+		{
+			name: "MarkdownResult = title + message",
+			message: []byte(`{
+            "id": 733,
+            "appid": 4,
+            "message": "This is a test message with Markdown\n\r![](https://some.link.com/image.png)\n",
+            "title": "Test Notification",
+            "priority": 5,
+            "extras": {
+                "client::display": {
+                    "contentType": "text/markdown"
+                }
+            },
+            "date": "2025-03-01T00:01:02.223071187+01:00"
+        }`),
+			expected:      "# Test Notification\n\n" + "This is a test message with Markdown\n\r![](https://some.link.com/image.png)\n",
+			expectedError: false,
+		},
 	}
 
 	for _, tc := range testCases {

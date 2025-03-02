@@ -88,7 +88,10 @@ func SendMessage(state *state, roomID string, message string) {
 	log.Debug().Msgf("Message: %s", message)
 	log.Debug().Msgf("Room ID: %s", matrixRoomId)
 
-	content := format.RenderMarkdown(message, true, true)
+	content := format.RenderMarkdown(
+		message,
+		/*allowMarkdown = */ true,
+		/*allowHTML = */ false)
 
 	var eventType event.Type
 	var eventContent any

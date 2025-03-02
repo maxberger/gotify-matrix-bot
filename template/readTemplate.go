@@ -11,6 +11,11 @@ import (
 type Message struct {
 	Title   string `json:"title"`
 	Message string `json:"message"`
+	Extras  struct {
+		ClientDisplay struct {
+			ContentType string `json:"contentType"`
+		} `json:"client::display"`
+	} `json:"extras"`
 }
 
 func GetFormattedMessageString(message []byte) string {
@@ -23,15 +28,26 @@ func GetFormattedMessageString(message []byte) string {
 		return "Could not parse message from: " + string(message)
 	}
 
-	templateString, err := os.ReadFile("messageTamplate.md")
+	contentType := strings.ToLower(strings.TrimSpace(m.Extras.ClientDisplay.ContentType))
 
-	if err != nil {
-		log.Fatal().Err(err).Msg("Could not find / read messageTamplate.md!")
+	var markDownContent string
+
+	if len(contentType) == 0 || contentType == "text/plain" {
+
+		templateString, err := os.ReadFile("messageTamplate.md")
+
+		if err != nil {
+			log.Fatal().Err(err).Msg("Could not find / read messageTamplate.md!")
+			return m.Message
+		}
+
+		markDownContent = strings.ReplaceAll(string(templateString), "[TITLE]", m.Title)
+		markDownContent = strings.ReplaceAll(markDownContent, "[MESSAGE]", m.Message)
+	} else if contentType == "text/markdown" {
+		markDownContent = "# " + m.Title + "\n\n" + m.Message
+	} else {
+		log.Warn().Msgf("Unknown Content Type: %s", contentType)
+		markDownContent = m.Message
 	}
-
-	content := strings.ReplaceAll(string(templateString), "[TITLE]", m.Title)
-
-	content = strings.ReplaceAll(content, "[MESSAGE]", m.Message)
-
-	return content
+	return markDownContent
 }
