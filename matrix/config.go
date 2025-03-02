@@ -3,7 +3,6 @@ package matrix
 import (
 	"context"
 
-	"maunium.net/go/mautrix"
 	"maunium.net/go/mautrix/crypto"
 	"maunium.net/go/mautrix/event"
 	"maunium.net/go/mautrix/id"
@@ -31,7 +30,7 @@ func (fss *FakeStateStore) FindSharedRooms(ctx context.Context, userID id.UserID
 
 // Easy way to get room members (to find out who to share keys to).
 // In real apps, you should cache the member list somewhere and update it based on m.room.member events.
-func getUserIDs(ctx context.Context, cli *mautrix.Client, roomID id.RoomID) []id.UserID {
+func getUserIDs(ctx context.Context, cli MautrixClientType, roomID id.RoomID) []id.UserID {
 	members, err := cli.JoinedMembers(ctx, roomID)
 	if err != nil {
 		panic(err)

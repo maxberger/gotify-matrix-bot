@@ -6,6 +6,7 @@ toolchain go1.23.1
 
 require (
 	github.com/gorilla/websocket v1.5.3
+	github.com/petergtz/pegomock/v4 v4.1.0
 	github.com/rs/zerolog v1.33.0
 	go.mau.fi/util v0.8.5
 	gopkg.in/yaml.v3 v3.0.1
@@ -18,6 +19,7 @@ require (
 	github.com/google/go-cmp v0.6.0 // indirect
 	github.com/mattn/go-colorable v0.1.14 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
+	github.com/onsi/gomega v1.27.6 // indirect
 	github.com/petermattis/goid v0.0.0-20250211185408-f2b9d978cd7a // indirect
 	github.com/tidwall/gjson v1.18.0 // indirect
 	github.com/tidwall/match v1.1.1 // indirect

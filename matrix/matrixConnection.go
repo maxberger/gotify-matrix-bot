@@ -14,11 +14,17 @@ import (
 	"maunium.net/go/mautrix/id"
 )
 
-type state struct {
-	isEncrypted   bool
-	matrixContext context.Context
-	matrixClient  *mautrix.Client
-	olmMachine    *crypto.OlmMachine
+type MautrixClientType interface {
+	SendMessageEvent(ctx context.Context, roomID id.RoomID, eventType event.Type, content interface{}, extra ...mautrix.ReqSendEvent) (*mautrix.RespSendEvent, error)
+	JoinedMembers(ctx context.Context, roomID id.RoomID) (resp *mautrix.RespJoinedMembers, err error)
+	Sync() error
+}
+
+type MatrixState struct {
+	IsEncrypted   bool
+	MatrixContext context.Context
+	MautrixClient MautrixClientType
+	OlmMachine    *crypto.OlmMachine
 }
 
 func Connect(
@@ -27,7 +33,7 @@ func Connect(
 	domain string,
 	token string,
 	encrypted bool,
-) *state {
+) *MatrixState {
 	var mach *crypto.OlmMachine = nil
 	ctx := context.Background()
 	cli, err := mautrix.NewClient(
@@ -73,15 +79,15 @@ func Connect(
 
 	log.Info().Msgf("Connected to Matrix. Encryption active: %t", encrypted)
 
-	return &state{
-		isEncrypted:   encrypted,
-		matrixContext: ctx,
-		matrixClient:  cli,
-		olmMachine:    mach,
+	return &MatrixState{
+		IsEncrypted:   encrypted,
+		MatrixContext: ctx,
+		MautrixClient: cli,
+		OlmMachine:    mach,
 	}
 }
 
-func SendMessage(state *state, roomID string, message string) {
+func SendMessage(state *MatrixState, roomID string, message string) {
 	matrixRoomId := id.RoomID(roomID)
 
 	log.Info().Msg("Sending new message")
@@ -96,25 +102,25 @@ func SendMessage(state *state, roomID string, message string) {
 	var eventType event.Type
 	var eventContent any
 
-	if state.isEncrypted {
-		encryptedContent, err := state.olmMachine.EncryptMegolmEvent(
-			state.matrixContext,
+	if state.IsEncrypted {
+		encryptedContent, err := state.OlmMachine.EncryptMegolmEvent(
+			state.MatrixContext,
 			matrixRoomId,
 			event.EventMessage,
 			content)
 		// These three errors mean we have to make a new Megolm session
 		if err == crypto.SessionExpired || err == crypto.SessionNotShared || err == crypto.NoGroupSession {
 			log.Debug().Msg("Creating new Megolm session")
-			err = state.olmMachine.ShareGroupSession(
-				state.matrixContext,
+			err = state.OlmMachine.ShareGroupSession(
+				state.MatrixContext,
 				matrixRoomId,
-				getUserIDs(state.matrixContext, state.matrixClient, matrixRoomId))
+				getUserIDs(state.MatrixContext, state.MautrixClient, matrixRoomId))
 			if err != nil {
 				log.Fatal().Err(err).Msg("Could not share group session.")
 				return
 			}
-			encryptedContent, err = state.olmMachine.EncryptMegolmEvent(
-				state.matrixContext,
+			encryptedContent, err = state.OlmMachine.EncryptMegolmEvent(
+				state.MatrixContext,
 				matrixRoomId,
 				event.EventMessage,
 				content)
@@ -134,8 +140,8 @@ func SendMessage(state *state, roomID string, message string) {
 		eventContent = content
 	}
 
-	_, err := state.matrixClient.SendMessageEvent(
-		state.matrixContext,
+	_, err := state.MautrixClient.SendMessageEvent(
+		state.MatrixContext,
 		matrixRoomId,
 		eventType,
 		eventContent)
