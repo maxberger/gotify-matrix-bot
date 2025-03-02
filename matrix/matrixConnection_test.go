@@ -71,11 +71,9 @@ func TestUploadImages(t *testing.T) {
 
 		assert.Equal(t, result, message)
 
-		mockClient.VerifyWasCalled(pegomock.Never()).SendMessageEvent(
+		mockClient.VerifyWasCalled(pegomock.Never()).UploadMedia(
 			pegomock.Any[context.Context](),
-			pegomock.Any[id.RoomID](),
-			pegomock.Any[event.Type](),
-			pegomock.Any[interface{}]())
+			pegomock.Any[mautrix.ReqUploadMedia]())
 	})
 
 	t.Run("Message with Link downloads link and changes URL", func(t *testing.T) {
@@ -102,5 +100,18 @@ func TestUploadImages(t *testing.T) {
 			pegomock.Any[id.RoomID](),
 			pegomock.Any[event.Type](),
 			pegomock.Any[interface{}]())
+	})
+	t.Run("Non-Images are passed through", func(t *testing.T) {
+		mockClient, state := setupMock(t)
+		server, serverUrl := setupHttpServer("text/plain")
+		defer server.Close()
+
+		message := "Before\n![](" + serverUrl + "/image.png)\nAfter"
+		result := UploadImages(state, message)
+		assert.Equal(t, result, message)
+
+		mockClient.VerifyWasCalled(pegomock.Never()).UploadMedia(
+			pegomock.Any[context.Context](),
+			pegomock.Any[mautrix.ReqUploadMedia]())
 	})
 }

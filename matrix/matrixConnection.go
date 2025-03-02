@@ -159,37 +159,49 @@ var imageRegexp *regexp.Regexp = regexp.MustCompile(`\!\[\]\(http.*?\)`)
 
 func UploadImages(state *MatrixState, markDownMessage string) string {
 	leftMost := 0
-	for loc := imageRegexp.FindStringIndex(markDownMessage[leftMost:]); loc != nil; loc = imageRegexp.FindStringIndex(markDownMessage) {
+	for loc := imageRegexp.FindStringIndex(markDownMessage[leftMost:]); loc != nil && leftMost < len(markDownMessage); loc = imageRegexp.FindStringIndex(markDownMessage[leftMost:]) {
 		index := loc[0] + leftMost
 		end := loc[1] + leftMost
 		leftMost = index + 1
 		url := markDownMessage[index+4 : end-1]
 
-		log.Debug().Msgf("Downloading image from %s", url)
-		downloadRespose, err := http.Get(url)
-
-		if err != nil {
-			log.Warn().Err(err).Msgf("Failed to download %s", url)
-		}
-
-		contentType := downloadRespose.Header.Get("Content-Type")
-		contentLength := downloadRespose.ContentLength
-
-		log.Debug().Msgf("Found image of type %s with length %d", contentType, contentLength)
-
-		resp, err := state.MautrixClient.UploadMedia(state.MatrixContext, mautrix.ReqUploadMedia{
-			Content:       downloadRespose.Body,
-			ContentLength: contentLength,
-			ContentType:   contentType,
-		})
-		if err != nil {
-			log.Warn().Err(err).Msg("Failed to upload image")
-		}
-		newUrl := resp.ContentURI.CUString()
+		newUrl := downloadAndUploadImage(url, state)
 		log.Debug().Msgf("Image was stored as %s", newUrl)
 
 		replacement := "![](" + newUrl + ")"
 		markDownMessage = markDownMessage[:index] + string(replacement) + markDownMessage[end:]
 	}
 	return markDownMessage
+}
+
+func downloadAndUploadImage(url string, state *MatrixState) string {
+	log.Debug().Msgf("Downloading image from %s", url)
+	downloadRespose, err := http.Get(url)
+
+	if err != nil {
+		log.Warn().Err(err).Msgf("Failed to download %s", url)
+		return url
+	}
+
+	contentType := downloadRespose.Header.Get("Content-Type")
+	contentLength := downloadRespose.ContentLength
+
+	log.Debug().Msgf("Found image of type %s with length %d", contentType, contentLength)
+
+	if !strings.HasPrefix(contentType, "image/") {
+		log.Warn().Err(err).Msgf("Invalid image content type: %s", contentType)
+		return url
+	}
+
+	resp, err := state.MautrixClient.UploadMedia(state.MatrixContext, mautrix.ReqUploadMedia{
+		Content:       downloadRespose.Body,
+		ContentLength: contentLength,
+		ContentType:   contentType,
+	})
+	if err != nil {
+		log.Warn().Err(err).Msg("Failed to upload image")
+		return url
+	}
+	newUrl := resp.ContentURI.CUString()
+	return string(newUrl)
 }
