@@ -2,7 +2,6 @@ package template
 
 import (
 	"encoding/json"
-	"os"
 	"strings"
 
 	"github.com/rs/zerolog/log"
@@ -36,13 +35,10 @@ func GetFormattedMessageString(message []byte) string {
 	var markDownContent string
 
 	if len(contentType) == 0 || contentType == "text/plain" {
+		templateString := `# [TITLE]
 
-		templateString, err := os.ReadFile("messageTamplate.md")
-
-		if err != nil {
-			log.Fatal().Err(err).Msg("Could not find / read messageTamplate.md!")
-			return m.Message
-		}
+[MESSAGE]
+`
 
 		markDownContent = strings.ReplaceAll(string(templateString), "[TITLE]", m.Title)
 		markDownContent = strings.ReplaceAll(markDownContent, "[MESSAGE]", m.Message)

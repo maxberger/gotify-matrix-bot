@@ -14,9 +14,9 @@ func TestGetFormattedMessageString(t *testing.T) {
 		expectedError bool
 	}{
 		{
-			name:          "Valid message",
+			name:          "Valid plain text message",
 			message:       []byte(`{"title": "Test Title", "message": "Test Message"}`),
-			expected:      "### Test Title\n\nTest Message\n",
+			expected:      "# Test Title\n\nTest Message\n",
 			expectedError: false,
 		},
 		{
@@ -28,7 +28,7 @@ func TestGetFormattedMessageString(t *testing.T) {
 		{
 			name:          "Empty message",
 			message:       []byte(`{"title": "", "message": ""}`),
-			expected:      "### \n\n\n",
+			expected:      "# \n\n\n",
 			expectedError: false,
 		},
 		{

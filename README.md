@@ -31,7 +31,7 @@ This application acts as an intermediary, forwarding notifications from a Gotify
 
 ### Docker
 
-You can use docker to run the bot. You need a mount the /data directory in read-write mode. The data directory needs to contain the `config.yaml` (copy from [example.config.yaml](example.config.yaml) and edit) file and the [messageTamplate.md](messageTamplate.md) file. It will also store state data from the running bot.
+You can use docker to run the bot. You need a mount the /data directory in read-write mode. The data directory needs to contain the `config.yaml` (copy from [example.config.yaml](example.config.yaml) and edit) file. It will also store state data from the running bot.
 
 Sample docker compose snippet:
 
