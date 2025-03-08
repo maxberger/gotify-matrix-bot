@@ -12,6 +12,11 @@ import (
 func MainLoop() {
 	log.Info().Msg("Starting main loop...")
 
+	allowListAsRegexps, err := config.DownloadAllowListAsRegexps(config.Configuration)
+	if err != nil {
+		log.Fatal().Err(err).Msg("Failed to parse allow list")
+	}
+
 	matrixConnection := matrix.Connect(
 		config.Configuration.Matrix.HomeServerURL,
 		config.Configuration.Matrix.Username,
@@ -19,6 +24,7 @@ func MainLoop() {
 		config.Configuration.Matrix.Token,
 		config.Configuration.Matrix.DeviceID,
 		config.Configuration.Matrix.Encrypted,
+		allowListAsRegexps,
 	)
 
 	gotify_messages.OnNewMessage(func(rawMessage []byte) {

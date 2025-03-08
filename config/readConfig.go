@@ -2,6 +2,7 @@ package config
 
 import (
 	"os"
+	"regexp"
 	"strings"
 
 	"github.com/rs/zerolog/log"
@@ -34,7 +35,8 @@ type Config struct {
 	Matrix  MatrixType
 	Logging LoggingType
 	// Deprecated: Use Logging instead
-	Debug bool `yaml:"debug"`
+	Debug                     bool     `yaml:"debug"`
+	DownloadFromHostAllowlist []string `yaml:"downloadFromHostAllowlist"`
 }
 
 var Configuration *Config = nil
@@ -124,4 +126,16 @@ func checkValues(config *Config) {
 	if config.Debug {
 		log.Warn().Msg("Using deprecated keyword 'debug' in config. Please use logging/level instead")
 	}
+}
+
+func DownloadAllowListAsRegexps(config *Config) ([]*regexp.Regexp, error) {
+	filters := make([]*regexp.Regexp, len(config.DownloadFromHostAllowlist))
+	var err error
+	for idx, pattern := range config.DownloadFromHostAllowlist {
+		filters[idx], err = regexp.Compile(pattern)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return filters, nil
 }

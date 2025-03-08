@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"regexp"
 	"testing"
 
 	. "gotify_matrix_bot/matrix"
@@ -16,13 +17,14 @@ import (
 	"maunium.net/go/mautrix/id"
 )
 
-func setupMock(t *testing.T) (*MockMautrixClientType, *MatrixState) {
+func setupMock(t *testing.T, downloadAllowList []*regexp.Regexp) (*MockMautrixClientType, *MatrixState) {
 	mockClient := NewMockMautrixClientType(pegomock.WithT(t))
 	state := &MatrixState{
-		IsEncrypted:   false,
-		MatrixContext: context.Background(),
-		MautrixClient: mockClient,
-		OlmMachine:    nil,
+		IsEncrypted:               false,
+		MatrixContext:             context.Background(),
+		MautrixClient:             mockClient,
+		OlmMachine:                nil,
+		DownloadFromHostAllowlist: downloadAllowList,
 	}
 	return mockClient, state
 }
@@ -40,7 +42,7 @@ func TestSendMessage(t *testing.T) {
 	pegomock.RegisterMockTestingT(t)
 
 	t.Run("Send unencrypted message", func(t *testing.T) {
-		mockClient, state := setupMock(t)
+		mockClient, state := setupMock(t, nil)
 
 		roomID := "!room:example.com"
 		message := "Test Message"
@@ -64,7 +66,7 @@ func TestUploadImages(t *testing.T) {
 	pegomock.RegisterMockTestingT(t)
 
 	t.Run("MessageWithoutLinksIsUnchanged", func(t *testing.T) {
-		mockClient, state := setupMock(t)
+		mockClient, state := setupMock(t, nil)
 
 		message := "Test Message"
 		result := UploadImages(state, message)
@@ -77,8 +79,10 @@ func TestUploadImages(t *testing.T) {
 	})
 
 	t.Run("Message with Link downloads link and changes URL", func(t *testing.T) {
-		mockClient, state := setupMock(t)
 		server, serverUrl := setupHttpServer("image/png")
+		mockClient, state := setupMock(t, []*regexp.Regexp{
+			regexp.MustCompile(".*"),
+		})
 		defer server.Close()
 
 		pegomock.When(mockClient.UploadMedia(
@@ -99,11 +103,13 @@ func TestUploadImages(t *testing.T) {
 			pegomock.Any[context.Context](),
 			pegomock.Any[id.RoomID](),
 			pegomock.Any[event.Type](),
-			pegomock.Any[interface{}]())
+			pegomock.Any[any]())
 	})
 	t.Run("Non-Images are passed through", func(t *testing.T) {
-		mockClient, state := setupMock(t)
 		server, serverUrl := setupHttpServer("text/plain")
+		mockClient, state := setupMock(t, []*regexp.Regexp{
+			regexp.MustCompile(".*"),
+		})
 		defer server.Close()
 
 		message := "Before\n![](" + serverUrl + "/image.png)\nAfter"
@@ -114,4 +120,49 @@ func TestUploadImages(t *testing.T) {
 			pegomock.Any[context.Context](),
 			pegomock.Any[mautrix.ReqUploadMedia]())
 	})
+
+	t.Run("Image from non-allowlisted server is ignored", func(t *testing.T) {
+		server, serverUrl := setupHttpServer("image/png")
+		mockClient, state := setupMock(t, []*regexp.Regexp{
+			regexp.MustCompile("some-other-server.com"),
+		})
+		defer server.Close()
+
+		message := "Before\n![](" + serverUrl + "/image.png)\nAfter"
+		result := UploadImages(state, message)
+		assert.Equal(t, result, message)
+
+		mockClient.VerifyWasCalled(pegomock.Never()).UploadMedia(
+			pegomock.Any[context.Context](),
+			pegomock.Any[mautrix.ReqUploadMedia]())
+	})
+
+	t.Run("Image is ignored if allowlist is empty", func(t *testing.T) {
+		server, serverUrl := setupHttpServer("image/png")
+		mockClient, state := setupMock(t, []*regexp.Regexp{})
+		defer server.Close()
+
+		message := "Before\n![](" + serverUrl + "/image.png)\nAfter"
+		result := UploadImages(state, message)
+		assert.Equal(t, result, message)
+
+		mockClient.VerifyWasCalled(pegomock.Never()).UploadMedia(
+			pegomock.Any[context.Context](),
+			pegomock.Any[mautrix.ReqUploadMedia]())
+	})
+
+	t.Run("Image is ignored if allowlist is nil", func(t *testing.T) {
+		server, serverUrl := setupHttpServer("image/png")
+		mockClient, state := setupMock(t, nil)
+		defer server.Close()
+
+		message := "Before\n![](" + serverUrl + "/image.png)\nAfter"
+		result := UploadImages(state, message)
+		assert.Equal(t, result, message)
+
+		mockClient.VerifyWasCalled(pegomock.Never()).UploadMedia(
+			pegomock.Any[context.Context](),
+			pegomock.Any[mautrix.ReqUploadMedia]())
+	})
+
 }

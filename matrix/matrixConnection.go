@@ -3,6 +3,7 @@ package matrix
 import (
 	"context"
 	"net/http"
+	"net/url"
 	"regexp"
 	"strings"
 
@@ -24,10 +25,11 @@ type MautrixClientType interface {
 }
 
 type MatrixState struct {
-	IsEncrypted   bool
-	MatrixContext context.Context
-	MautrixClient MautrixClientType
-	OlmMachine    *crypto.OlmMachine
+	IsEncrypted               bool
+	MatrixContext             context.Context
+	MautrixClient             MautrixClientType
+	OlmMachine                *crypto.OlmMachine
+	DownloadFromHostAllowlist []*regexp.Regexp
 }
 
 func Connect(
@@ -37,6 +39,7 @@ func Connect(
 	token string,
 	deviceID string,
 	encrypted bool,
+	downloadFromHostAllowlist []*regexp.Regexp,
 ) *MatrixState {
 	var mach *crypto.OlmMachine = nil
 	ctx := context.Background()
@@ -87,10 +90,11 @@ func Connect(
 	log.Info().Msgf("Connected to Matrix. Encryption active: %t", encrypted)
 
 	return &MatrixState{
-		IsEncrypted:   encrypted,
-		MatrixContext: ctx,
-		MautrixClient: cli,
-		OlmMachine:    mach,
+		IsEncrypted:               encrypted,
+		MatrixContext:             ctx,
+		MautrixClient:             cli,
+		OlmMachine:                mach,
+		DownloadFromHostAllowlist: downloadFromHostAllowlist,
 	}
 }
 
@@ -162,14 +166,35 @@ func SendMessage(state *MatrixState, roomID string, markDownMessage string) {
 var imageRegexp *regexp.Regexp = regexp.MustCompile(`\!\[\]\(http.*?\)`)
 
 func UploadImages(state *MatrixState, markDownMessage string) string {
+	if len(state.DownloadFromHostAllowlist) == 0 {
+		return markDownMessage
+	}
 	leftMost := 0
 	for loc := imageRegexp.FindStringIndex(markDownMessage[leftMost:]); loc != nil && leftMost < len(markDownMessage); loc = imageRegexp.FindStringIndex(markDownMessage[leftMost:]) {
 		index := loc[0] + leftMost
 		end := loc[1] + leftMost
 		leftMost = index + 1
-		url := markDownMessage[index+4 : end-1]
+		rawUrl := markDownMessage[index+4 : end-1]
 
-		newUrl := downloadAndUploadImage(url, state)
+		parsed, err := url.Parse(rawUrl)
+		if err != nil {
+			log.Warn().Err(err).Msgf("Failed to parse url %s", rawUrl)
+			continue
+		}
+		allowed := false
+		for _, allow := range state.DownloadFromHostAllowlist {
+			if allow.MatchString(parsed.Host) {
+				allowed = true
+				break
+			}
+		}
+
+		if !allowed {
+			log.Info().Msgf("Host is not on allowlist: %s; not downloading %s", parsed.Host, rawUrl)
+			continue
+		}
+
+		newUrl := downloadAndUploadImage(rawUrl, state)
 		log.Debug().Msgf("Image was stored as %s", newUrl)
 
 		replacement := "![](" + newUrl + ")"
