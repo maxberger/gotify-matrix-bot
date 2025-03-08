@@ -8,9 +8,7 @@ This application acts as an intermediary, forwarding notifications from a Gotify
 
 ## Installation and Configuration
 
-Detailed instructions for installation, configuration, and deployment can be found on the original project's [Wiki](https://github.com/Ondolin/gotify-matrix-bot/wiki).
-
-## Getting Started
+### Standalone app / build from source
 
 1. **Clone the Repository:**
 
@@ -18,7 +16,7 @@ Detailed instructions for installation, configuration, and deployment can be fou
     git clone https://github.com/Ondolin/gotify-matrix-bot.git
     ```
 
-2. **Read the config**: adjust the `/config.yaml` according to your needs. Use the `example.config.yaml` as a starting point.
+2. **Read the config**: adjust the `/config.yaml` according to your needs. Use the [example.config.yaml](example.config.yaml) as a starting point.
 3. **Build the application:**
 
     ```bash
@@ -30,6 +28,21 @@ Detailed instructions for installation, configuration, and deployment can be fou
     ```bash
     ./gotify_matrix_bot
     ```
+
+### Docker
+
+You can use docker to run the bot. You need a mount the /data directory in read-write mode. The data directory needs to contain the `config.yaml` (copy from [example.config.yaml](example.config.yaml) and edit) file and the [messageTamplate.md](messageTamplate.md) file. It will also store state data from the running bot.
+
+Sample docker compose snippet:
+
+```yaml
+  gotifymatrixhomelab:
+    container_name: gotifymatrixhomelab
+    image: ghcr.io/maxberger/gotify-matrix-bot:master
+    volumes:
+      - /your/path/to/data:/data
+    restart: unless-stopped    
+```
 
 ## Contributing
 

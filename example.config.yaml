@@ -1,11 +1,22 @@
 gotify:
-  url: [[ URL ]]
-  apiToken: [[ API_TOKEN ]]
+  # URL of your gotify server
+  url: https://gotify.yourdomain.com
+  # Create an API Token in GOTIFY
+  apiToken: "asdjklreujiot"
 matrix:
-  homeserverURL: [[ MATRIX_HOMESERVER_URL]]
-  matrixDomain: [[ @bot:[this] ]]
-  username: [[ MATRIX_BOT_USERNAME ]]
-  token: [[ MATRIX_BOT_API_TOKEN ]]
-  roomID: [[ ID_OF_MATRIX_ROOM ]]
-  encrypted: [[ true of encryption should be enabled ]]
-debug: [[ DEBUG_MODE ]]
+  # Your homeserver.
+  homeserverURL: "https://chat.yourdomain.com"
+  # Matrix domain. Optional if it matches just the hostname.
+  matrixDomain: "yourdomain.com"
+  # Username. Must already exist on the server
+  username: "botname"
+  # Get an API token from Matrix
+  token: "dsfjgkldsfjgkl"
+  roomID: "!sdjfklsdjlf:yourdomain.com"
+  # Set this to true if the room is encrypted, false otherwise
+  encrypted: true
+logging:
+  # can be DEBUG, INFO, WARN, ERROR
+  level: INFO
+  # can be PLAIN, COLOR, JSON
+  format: color
