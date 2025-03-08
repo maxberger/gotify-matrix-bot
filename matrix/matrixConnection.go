@@ -35,6 +35,7 @@ func Connect(
 	username string,
 	domain string,
 	token string,
+	deviceID string,
 	encrypted bool,
 ) *MatrixState {
 	var mach *crypto.OlmMachine = nil
@@ -48,7 +49,10 @@ func Connect(
 	}
 
 	// DeviceID is needed for some older clients, e.g. some versions Element
-	cli.DeviceID = id.DeviceID(strings.ToUpper(random.String(10)))
+	if len(deviceID) == 0 {
+		deviceID = strings.ToUpper(random.String(10))
+	}
+	cli.DeviceID = id.DeviceID(deviceID)
 
 	if encrypted {
 		cryptoStore := crypto.NewMemoryStore(nil)

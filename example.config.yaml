@@ -13,6 +13,9 @@ matrix:
   # Get an API token from Matrix
   token: "dsfjgkldsfjgkl"
   roomID: "!sdjfklsdjlf:yourdomain.com"
+  # If you want to always use the same device ID, set it here.
+  # Leave blank or unset for a random device ID
+  deviceID: ""
   # Set this to true if the room is encrypted, false otherwise
   encrypted: true
 logging:

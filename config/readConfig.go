@@ -20,6 +20,7 @@ type MatrixType struct {
 	Username      string `yaml:"username"`
 	Token         string `yaml:"token"`
 	RoomID        string `yaml:"roomID"`
+	DeviceID      string `yaml:"deviceID"`
 	Encrypted     bool   `yaml:"encrypted"`
 }
 

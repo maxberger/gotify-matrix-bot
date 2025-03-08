@@ -17,6 +17,7 @@ func MainLoop() {
 		config.Configuration.Matrix.Username,
 		config.Configuration.Matrix.MatrixDomain,
 		config.Configuration.Matrix.Token,
+		config.Configuration.Matrix.DeviceID,
 		config.Configuration.Matrix.Encrypted,
 	)
 
