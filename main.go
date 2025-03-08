@@ -4,6 +4,7 @@ import (
 	"gotify_matrix_bot/bot"
 	"gotify_matrix_bot/config"
 	"os"
+	"runtime/debug"
 	"strings"
 
 	"github.com/rs/zerolog"
@@ -15,8 +16,23 @@ func main() {
 	setupLoggerFromConfig()
 	config.ValidateConfig()
 
-	log.Info().Msg("The gotify matrix bot has started now.")
+	logVersion()
 	bot.MainLoop()
+}
+
+func logVersion() {
+	info, ok := debug.ReadBuildInfo()
+	timeString := ""
+	if ok {
+		for _, setting := range info.Settings {
+			if setting.Key == "vcs.time" {
+				timeString = "Commit time: " + setting.Value
+			}
+		}
+	}
+
+	log.Info().Msgf("The gotify matrix bot version %s has started now. %s", info.Main.Version, timeString)
+
 }
 
 func setupLoggerFromConfig() {
