@@ -25,10 +25,10 @@ func logVersion() {
 
 	versionString := ""
 	if ok {
-		versionString = "version" + info.Main.Version
+		versionString = " " + info.Main.Version
 	}
 
-	log.Info().Msgf("Gotify matrix bot %s has started.", versionString)
+	log.Info().Msgf("Gotify matrix bot%s has started.", versionString)
 }
 
 func setupLoggerFromConfig() {
