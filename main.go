@@ -22,17 +22,13 @@ func main() {
 
 func logVersion() {
 	info, ok := debug.ReadBuildInfo()
-	timeString := ""
+
+	versionString := ""
 	if ok {
-		for _, setting := range info.Settings {
-			if setting.Key == "vcs.time" {
-				timeString = "Commit time: " + setting.Value
-			}
-		}
+		versionString = "version" + info.Main.Version
 	}
 
-	log.Info().Msgf("The gotify matrix bot version %s has started now. %s", info.Main.Version, timeString)
-
+	log.Info().Msgf("Gotify matrix bot %s has started.", versionString)
 }
 
 func setupLoggerFromConfig() {
