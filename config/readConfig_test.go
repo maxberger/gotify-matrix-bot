@@ -118,9 +118,10 @@ debug: true
 		{
 			name: "valid data with allowList",
 			config: []byte(`
-downloadFromHostAllowlist: 
-  - ".*\\.yourdomain\\.com"
-  - ".*\\.trusteddomain\\.com"
+downloader:
+  allowedHosts:
+    - ".*\\.yourdomain\\.com"
+    - ".*\\.trusteddomain\\.com"
 `),
 			expected: &Config{
 				Gotify: GotifyType{
@@ -129,7 +130,9 @@ downloadFromHostAllowlist:
 				Logging: LoggingType{
 					Level: "info",
 				},
-				DownloadFromHostAllowlist: []string{`.*\.yourdomain\.com`, `.*\.trusteddomain\.com`},
+				Downloader: DownloaderType{
+					AllowedHosts: []string{`.*\.yourdomain\.com`, `.*\.trusteddomain\.com`},
+				},
 			},
 			expectedError: false,
 		},
@@ -152,7 +155,9 @@ func TestDownloadAllowListAsRegexps(t *testing.T) {
 		{
 			name: "Valid allow list",
 			config: &Config{
-				DownloadFromHostAllowlist: []string{`www\.host1\.com`, `www\.host2\.com`},
+				Downloader: DownloaderType{
+					AllowedHosts: []string{`www\.host1\.com`, `www\.host2\.com`},
+				},
 			},
 			expected: &[]regexp.Regexp{
 				*regexp.MustCompile(`www\.host1\.com`),
@@ -163,7 +168,9 @@ func TestDownloadAllowListAsRegexps(t *testing.T) {
 		{
 			name: "Invalid Regexp",
 			config: &Config{
-				DownloadFromHostAllowlist: []string{`$$$^^(`},
+				Downloader: DownloaderType{
+					AllowedHosts: []string{`www\.host1\.com`, `$$$^^(`},
+				},
 			},
 			expected:      nil,
 			expectedError: "error parsing regexp",
@@ -171,7 +178,9 @@ func TestDownloadAllowListAsRegexps(t *testing.T) {
 		{
 			name: "Empty list works",
 			config: &Config{
-				DownloadFromHostAllowlist: []string{},
+				Downloader: DownloaderType{
+					AllowedHosts: []string{},
+				},
 			},
 			expected:      &[]regexp.Regexp{},
 			expectedError: "",
@@ -179,7 +188,9 @@ func TestDownloadAllowListAsRegexps(t *testing.T) {
 		{
 			name: "Nil list works",
 			config: &Config{
-				DownloadFromHostAllowlist: nil,
+				Downloader: DownloaderType{
+					AllowedHosts: nil,
+				},
 			},
 			expected:      &[]regexp.Regexp{},
 			expectedError: "",

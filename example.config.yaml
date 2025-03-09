@@ -23,8 +23,9 @@ logging:
   level: INFO
   # can be PLAIN, COLOR, JSON
   format: color
-downloadFromHostAllowlist:
-  # Set this to allow image downloading from gotify messages. The format is regexp.
-  # If you really want to allow all hosts, set this to ".*"
-  - ".*\\.yourdomain\\.com"
-  - ".*\\.trusteddomain\\.com"
+downloader:
+  allowedHosts:
+    # Set this to allow image downloading from gotify messages. The format is regexp.
+    # If you really want to allow all hosts, set this to ".*"
+    - ".*\\.yourdomain\\.com"
+    - ".*\\.trusteddomain\\.com"

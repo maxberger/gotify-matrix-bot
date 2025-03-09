@@ -30,13 +30,16 @@ type LoggingType struct {
 	Format string `yaml:"format"`
 }
 
+type DownloaderType struct {
+	AllowedHosts []string `yaml:"allowedHosts"`
+}
 type Config struct {
 	Gotify  GotifyType
 	Matrix  MatrixType
 	Logging LoggingType
 	// Deprecated: Use Logging instead
-	Debug                     bool     `yaml:"debug"`
-	DownloadFromHostAllowlist []string `yaml:"downloadFromHostAllowlist"`
+	Debug      bool `yaml:"debug"`
+	Downloader DownloaderType
 }
 
 var Configuration *Config = nil
@@ -129,9 +132,9 @@ func checkValues(config *Config) {
 }
 
 func DownloadAllowListAsRegexps(config *Config) ([]*regexp.Regexp, error) {
-	filters := make([]*regexp.Regexp, len(config.DownloadFromHostAllowlist))
+	filters := make([]*regexp.Regexp, len(config.Downloader.AllowedHosts))
 	var err error
-	for idx, pattern := range config.DownloadFromHostAllowlist {
+	for idx, pattern := range config.Downloader.AllowedHosts {
 		filters[idx], err = regexp.Compile(pattern)
 		if err != nil {
 			return nil, err
