@@ -54,4 +54,5 @@ func setupLoggerFromConfig() {
 		log.Debug().Msgf("Log level set to %s", level)
 	}
 
+	zerolog.DefaultContextLogger = &log.Logger
 }
