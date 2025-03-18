@@ -123,7 +123,7 @@ func fixLoggingLevel(c *Config) {
 func fixDeviceId(c *Config, generatedConfig *Config, fixesToStore *Config) {
 	if len(c.Matrix.DeviceID) == 0 {
 		var deviceID string
-		if len(generatedConfig.Matrix.DeviceID) > 0 {
+		if (generatedConfig != nil) && (len(generatedConfig.Matrix.DeviceID) > 0) {
 			deviceID = generatedConfig.Matrix.DeviceID
 		} else {
 			deviceID = strings.ToUpper(random.String(10))
