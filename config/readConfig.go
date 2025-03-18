@@ -6,49 +6,68 @@ import (
 	"strings"
 
 	"github.com/rs/zerolog/log"
+	"go.mau.fi/util/random"
 
 	"gopkg.in/yaml.v3"
 )
 
 type GotifyType struct {
-	URL      string `yaml:"url"`
-	ApiToken string `yaml:"apiToken"`
+	URL      string `yaml:"url,omitempty"`
+	ApiToken string `yaml:"apiToken,omitempty"`
 }
 
 type MatrixType struct {
-	HomeServerURL string `yaml:"homeserverURL"`
-	MatrixDomain  string `yaml:"matrixDomain"`
-	Username      string `yaml:"username"`
-	Token         string `yaml:"token"`
-	RoomID        string `yaml:"roomID"`
-	DeviceID      string `yaml:"deviceID"`
+	HomeServerURL string `yaml:"homeserverURL,omitempty"`
+	MatrixDomain  string `yaml:"matrixDomain,omitempty"`
+	Username      string `yaml:"username,omitempty"`
+	Token         string `yaml:"token,omitempty"`
+	RoomID        string `yaml:"roomID,omitempty"`
+	DeviceID      string `yaml:"deviceID,omitempty"`
 }
 
 type LoggingType struct {
-	Level  string `yaml:"level"`
-	Format string `yaml:"format"`
+	Level  string `yaml:"level,omitempty"`
+	Format string `yaml:"format,omitempty"`
 }
 
 type DownloaderType struct {
-	AllowedHosts []string `yaml:"allowedHosts"`
+	AllowedHosts []string `yaml:"allowedHosts,omitempty"`
 }
 type Config struct {
-	Gotify  GotifyType
-	Matrix  MatrixType
-	Logging LoggingType
+	Gotify  GotifyType  `yaml:"gotify,omitempty"`
+	Matrix  MatrixType  `yaml:"matrix,omitempty"`
+	Logging LoggingType `yaml:"logging,omitempty"`
 	// Deprecated: Use Logging instead
-	Debug      bool `yaml:"debug"`
-	Downloader DownloaderType
+	Debug      bool           `yaml:"debug,omitempty"`
+	Downloader DownloaderType `yaml:"downloader,omitempty"`
 }
 
 var Configuration *Config = nil
 
-func LoadConfig() {
+func InitConfig() {
+	bufG, err := os.ReadFile("./config.generated.yaml")
+	var genConfig *Config = nil
+	if err == nil {
+		genConfig = parseConfig(bufG)
+	}
+
 	buf, err := os.ReadFile("./config.yaml")
 	if err != nil {
 		log.Fatal().Err(err).Msg("Could not load config.")
 	}
-	Configuration = parseConfig(buf)
+	var fixes *Config = nil
+
+	Configuration, fixes = fixConfig(parseConfig(buf), genConfig)
+
+	storeConfigFixes(fixes)
+}
+
+func storeConfigFixes(fixes *Config) {
+	out, err := yaml.Marshal(fixes)
+	if err != nil {
+		log.Fatal().Err(err).Msg("Could not generate config.")
+	}
+	os.WriteFile("./config.generated.yaml", out, 0644)
 }
 
 func ValidateConfig() {
@@ -63,14 +82,16 @@ func parseConfig(buf []byte) *Config {
 		log.Fatal().Err(err).Msg("Could not parse config.")
 	}
 
-	return fixConfig(c)
+	return c
 }
 
-func fixConfig(c *Config) *Config {
+func fixConfig(c *Config, generatedConfig *Config) (*Config, *Config) {
+	fixesToStore := &Config{}
 	fixMatrixDomain(c)
 	fixGotifyURL(c)
 	fixLoggingLevel(c)
-	return c
+	fixDeviceId(c, generatedConfig, fixesToStore)
+	return c, fixesToStore
 }
 
 func fixMatrixDomain(c *Config) {
@@ -96,6 +117,19 @@ func fixLoggingLevel(c *Config) {
 	}
 	if c.Logging.Level == "" {
 		c.Logging.Level = "info"
+	}
+}
+
+func fixDeviceId(c *Config, generatedConfig *Config, fixesToStore *Config) {
+	if len(c.Matrix.DeviceID) == 0 {
+		var deviceID string
+		if len(generatedConfig.Matrix.DeviceID) > 0 {
+			deviceID = generatedConfig.Matrix.DeviceID
+		} else {
+			deviceID = strings.ToUpper(random.String(10))
+		}
+		fixesToStore.Matrix.DeviceID = deviceID
+		c.Matrix.DeviceID = deviceID
 	}
 }
 

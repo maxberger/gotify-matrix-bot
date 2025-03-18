@@ -12,7 +12,7 @@ import (
 )
 
 func main() {
-	config.LoadConfig()
+	config.InitConfig()
 	setupLoggerFromConfig()
 	config.ValidateConfig()
 

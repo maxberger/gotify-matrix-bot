@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/rs/zerolog/log"
-	"go.mau.fi/util/random"
 	"maunium.net/go/mautrix"
 	"maunium.net/go/mautrix/crypto"
 	"maunium.net/go/mautrix/crypto/cryptohelper"
@@ -51,10 +50,6 @@ func Connect(
 		panic(err)
 	}
 
-	// DeviceID is needed for some older clients, e.g. some versions Element
-	if len(deviceID) == 0 {
-		deviceID = strings.ToUpper(random.String(10))
-	}
 	cli.DeviceID = id.DeviceID(deviceID)
 
 	syncer := cli.Syncer.(*mautrix.DefaultSyncer)
