@@ -6,6 +6,7 @@ toolchain go1.23.1
 
 require (
 	github.com/gorilla/websocket v1.5.3
+	github.com/mattn/go-sqlite3 v1.14.24
 	github.com/petergtz/pegomock/v4 v4.1.0
 	github.com/rs/zerolog v1.33.0
 	go.mau.fi/util v0.8.5
@@ -30,4 +31,5 @@ require (
 	golang.org/x/exp v0.0.0-20250228200357-dead58393ab7 // indirect
 	golang.org/x/net v0.35.0 // indirect
 	golang.org/x/sys v0.30.0 // indirect
+	golang.org/x/text v0.22.0 // indirect
 )

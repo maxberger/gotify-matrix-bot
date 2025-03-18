@@ -27,7 +27,6 @@ matrix:
   username: testuser
   token: testToken
   roomID: "!roomid"
-  encrypted: true
 logging:
   level: debug
   format: color
@@ -42,7 +41,6 @@ logging:
 					Token:         "testToken",
 					RoomID:        "!roomid",
 					MatrixDomain:  "matrix.example.com",
-					Encrypted:     true,
 				},
 				Logging: LoggingType{
 					Level:  "debug",
@@ -63,7 +61,6 @@ matrix:
   username: testuser
   token: testToken
   roomID: "!roomid"
-  encrypted: true
 debug: true
 `),
 			expected: &Config{
@@ -76,7 +73,6 @@ debug: true
 					Token:         "testToken",
 					RoomID:        "!roomid",
 					MatrixDomain:  "example.com",
-					Encrypted:     true,
 				},
 				Debug: true,
 				Logging: LoggingType{

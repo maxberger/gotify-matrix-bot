@@ -22,7 +22,6 @@ type MatrixType struct {
 	Token         string `yaml:"token"`
 	RoomID        string `yaml:"roomID"`
 	DeviceID      string `yaml:"deviceID"`
-	Encrypted     bool   `yaml:"encrypted"`
 }
 
 type LoggingType struct {
