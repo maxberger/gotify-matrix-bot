@@ -25,9 +25,8 @@ gotify:
 matrix:
   homeserverURL: https://matrix.example.com
   username: testuser
-  token: testToken
+  password: testPassword
   roomID: "!roomid"
-  deviceID: "1234567890"
 logging:
   level: debug
   format: color
@@ -39,10 +38,9 @@ logging:
 				Matrix: MatrixType{
 					HomeServerURL: "https://matrix.example.com",
 					Username:      "testuser",
-					Token:         "testToken",
+					Password:      "testPassword",
 					RoomID:        "!roomid",
 					MatrixDomain:  "matrix.example.com",
-					DeviceID:      "1234567890",
 				},
 				Logging: LoggingType{
 					Level:  "debug",
@@ -61,9 +59,8 @@ matrix:
   homeserverURL: https://matrix.example.com
   matrixDomain: example.com
   username: testuser
-  token: testToken
+  password: testPassword
   roomID: "!roomid"
-  deviceID: "1234567890"
 debug: true
 `),
 			expected: &Config{
@@ -73,10 +70,9 @@ debug: true
 				Matrix: MatrixType{
 					HomeServerURL: "https://matrix.example.com",
 					Username:      "testuser",
-					Token:         "testToken",
+					Password:      "testPassword",
 					RoomID:        "!roomid",
 					MatrixDomain:  "example.com",
-					DeviceID:      "1234567890",
 				},
 				Debug: true,
 				Logging: LoggingType{
@@ -89,15 +85,10 @@ debug: true
 			name: "Debug sets level if unset",
 			config: []byte(`
 debug: true
-matrix:
-  deviceID: "1234567890"
 `),
 			expected: &Config{
 				Gotify: GotifyType{
 					URL: "wss://",
-				},
-				Matrix: MatrixType{
-					DeviceID: "1234567890",
 				},
 				Debug: true,
 				Logging: LoggingType{
@@ -109,15 +100,10 @@ matrix:
 		{
 			name: "Log level defaults to info",
 			config: []byte(`
-matrix:
-  deviceID: "1234567890"
 `),
 			expected: &Config{
 				Gotify: GotifyType{
 					URL: "wss://",
-				},
-				Matrix: MatrixType{
-					DeviceID: "1234567890",
 				},
 				Logging: LoggingType{
 					Level: "info",
@@ -128,8 +114,6 @@ matrix:
 		{
 			name: "valid data with allowList",
 			config: []byte(`
-matrix:
-  deviceID: "1234567890"
 downloader:
   allowedHosts:
     - ".*\\.yourdomain\\.com"
@@ -138,9 +122,6 @@ downloader:
 			expected: &Config{
 				Gotify: GotifyType{
 					URL: "wss://",
-				},
-				Matrix: MatrixType{
-					DeviceID: "1234567890",
 				},
 				Logging: LoggingType{
 					Level: "info",
@@ -154,7 +135,7 @@ downloader:
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			result, _ := fixConfig(parseConfig(tc.config), nil)
+			result := fixConfig(parseConfig(tc.config))
 			assert.DeepEqual(t, result, tc.expected)
 		})
 	}

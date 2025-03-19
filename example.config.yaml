@@ -10,12 +10,9 @@ matrix:
   matrixDomain: "yourdomain.com"
   # Username. Must already exist on the server
   username: "botname"
-  # Get an API token from Matrix
-  token: "dsfjgkldsfjgkl"
+  # Password for the user
+  password: "dsfjgkldsfjgkl"
   roomID: "!sdjfklsdjlf:yourdomain.com"
-  # If you want to always use the same device ID, set it here.
-  # Leave blank or unset for a random device ID
-  deviceID: ""
 logging:
   # can be DEBUG, INFO, WARN, ERROR
   level: INFO

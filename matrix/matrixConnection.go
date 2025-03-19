@@ -4,8 +4,11 @@ import (
 	"context"
 	"net/http"
 	"net/url"
+	"os"
+	"os/signal"
 	"regexp"
 	"strings"
+	"syscall"
 
 	"github.com/rs/zerolog/log"
 	"maunium.net/go/mautrix"
@@ -37,20 +40,15 @@ func Connect(
 	homeServerURL string,
 	username string,
 	domain string,
-	token string,
-	deviceID string,
+	password string,
 	downloadFromHostAllowlist []*regexp.Regexp,
 ) *MatrixState {
 	ctx := context.Background()
-	cli, err := mautrix.NewClient(
-		homeServerURL,
-		id.UserID("@"+username+":"+domain),
-		token)
+	cli, err := mautrix.NewClient(homeServerURL, "", "")
+	cli.Log = log.With().Str("component", "matrix").Logger()
 	if err != nil {
-		panic(err)
+		log.Fatal().Err(err).Msg("Failed to create matrix client")
 	}
-
-	cli.DeviceID = id.DeviceID(deviceID)
 
 	syncer := cli.Syncer.(*mautrix.DefaultSyncer)
 	syncer.OnEventType(event.StateMember, func(ctx context.Context, evt *event.Event) {
@@ -70,21 +68,49 @@ func Connect(
 		}
 	})
 
+	login := &mautrix.ReqLogin{
+		Type: mautrix.AuthTypePassword,
+		Identifier: mautrix.UserIdentifier{
+			Type: mautrix.IdentifierTypeUser,
+			User: username,
+		},
+		Password: password,
+	}
+
 	cryptoHelper, err := cryptohelper.NewCryptoHelper(cli, []byte("gotify-matrix-client"), "cryptoStore.db")
 	if err != nil {
-		panic(err)
+		log.Fatal().Err(err).Msg("Could not create Crypto Helper")
 	}
+	cryptoHelper.LoginAs = login
+	log.Debug().Msg("Logging in...")
 	err = cryptoHelper.Init(ctx)
 	if err != nil {
-		panic(err)
+		log.Fatal().Err(err).Msg("Login failed.")
 	}
 	cli.Crypto = cryptoHelper
 
 	// Start long polling in the background
+	syncCtx, cancelSync := context.WithCancel(ctx)
 	go func() {
-		err = cli.SyncWithContext(ctx)
+		err = cli.SyncWithContext(syncCtx)
 		if err != nil {
-			panic(err)
+			log.Fatal().Err(err).Msg("Error during Sync with Matrix server")
+		}
+	}()
+	c := make(chan os.Signal, 1)
+	signal.Notify(c,
+		syscall.SIGABRT,
+		syscall.SIGHUP,
+		syscall.SIGINT,
+		syscall.SIGQUIT,
+		syscall.SIGTERM,
+	)
+	go func() {
+		for range c { // when the process is killed
+			log.Info().Msg("Cleaning up...")
+			cryptoHelper.Close()
+			cancelSync()
+			os.Exit(0)
 		}
 	}()
 

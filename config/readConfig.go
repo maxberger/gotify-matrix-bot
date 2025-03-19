@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"github.com/rs/zerolog/log"
-	"go.mau.fi/util/random"
 
 	"gopkg.in/yaml.v3"
 )
@@ -20,9 +19,8 @@ type MatrixType struct {
 	HomeServerURL string `yaml:"homeserverURL,omitempty"`
 	MatrixDomain  string `yaml:"matrixDomain,omitempty"`
 	Username      string `yaml:"username,omitempty"`
-	Token         string `yaml:"token,omitempty"`
+	Password      string `yaml:"password,omitempty"`
 	RoomID        string `yaml:"roomID,omitempty"`
-	DeviceID      string `yaml:"deviceID,omitempty"`
 }
 
 type LoggingType struct {
@@ -45,29 +43,14 @@ type Config struct {
 var Configuration *Config = nil
 
 func InitConfig() {
-	bufG, err := os.ReadFile("./config.generated.yaml")
-	var genConfig *Config = nil
-	if err == nil {
-		genConfig = parseConfig(bufG)
-	}
 
 	buf, err := os.ReadFile("./config.yaml")
 	if err != nil {
 		log.Fatal().Err(err).Msg("Could not load config.")
 	}
-	var fixes *Config = nil
 
-	Configuration, fixes = fixConfig(parseConfig(buf), genConfig)
+	Configuration = fixConfig(parseConfig(buf))
 
-	storeConfigFixes(fixes)
-}
-
-func storeConfigFixes(fixes *Config) {
-	out, err := yaml.Marshal(fixes)
-	if err != nil {
-		log.Fatal().Err(err).Msg("Could not generate config.")
-	}
-	os.WriteFile("./config.generated.yaml", out, 0644)
 }
 
 func ValidateConfig() {
@@ -85,13 +68,11 @@ func parseConfig(buf []byte) *Config {
 	return c
 }
 
-func fixConfig(c *Config, generatedConfig *Config) (*Config, *Config) {
-	fixesToStore := &Config{}
+func fixConfig(c *Config) *Config {
 	fixMatrixDomain(c)
 	fixGotifyURL(c)
 	fixLoggingLevel(c)
-	fixDeviceId(c, generatedConfig, fixesToStore)
-	return c, fixesToStore
+	return c
 }
 
 func fixMatrixDomain(c *Config) {
@@ -120,19 +101,6 @@ func fixLoggingLevel(c *Config) {
 	}
 }
 
-func fixDeviceId(c *Config, generatedConfig *Config, fixesToStore *Config) {
-	if len(c.Matrix.DeviceID) == 0 {
-		var deviceID string
-		if (generatedConfig != nil) && (len(generatedConfig.Matrix.DeviceID) > 0) {
-			deviceID = generatedConfig.Matrix.DeviceID
-		} else {
-			deviceID = strings.ToUpper(random.String(10))
-		}
-		fixesToStore.Matrix.DeviceID = deviceID
-		c.Matrix.DeviceID = deviceID
-	}
-}
-
 func checkValues(config *Config) {
 
 	if config.Gotify.URL == "" {
@@ -151,8 +119,8 @@ func checkValues(config *Config) {
 		log.Fatal().Msg("No matrix username specified.")
 	}
 
-	if config.Matrix.Token == "" {
-		log.Fatal().Msg("No matrix auth token specified.")
+	if config.Matrix.Password == "" {
+		log.Fatal().Msg("No matrix password specified.")
 	}
 
 	if config.Matrix.RoomID == "" {
