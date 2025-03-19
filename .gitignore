@@ -1,6 +1,6 @@
 config.yaml
 cache.yaml
 cryptoStore.gob
-cryptoStore.db
+cryptoStore.db*
 gotify_matrix_bot
 config.generated.yaml
