@@ -14,6 +14,7 @@ import (
 	"maunium.net/go/mautrix"
 	"maunium.net/go/mautrix/crypto"
 	"maunium.net/go/mautrix/crypto/cryptohelper"
+	"maunium.net/go/mautrix/crypto/verificationhelper"
 	"maunium.net/go/mautrix/event"
 	"maunium.net/go/mautrix/format"
 	"maunium.net/go/mautrix/id"
@@ -88,6 +89,23 @@ func Connect(
 		log.Fatal().Err(err).Msg("Login failed.")
 	}
 	cli.Crypto = cryptoHelper
+
+	acceptAllCallbacks := &AcceptAllVerificationCallbacks{}
+	verificationHelper := verificationhelper.NewVerificationHelper(
+		cli,
+		cryptoHelper.Machine(),
+		verificationhelper.NewInMemoryVerificationStore(),
+		acceptAllCallbacks,
+		false,
+		false,
+		true,
+	)
+	acceptAllCallbacks.VerificationHelper = verificationHelper
+
+	err = verificationHelper.Init(ctx)
+	if err != nil {
+		log.Fatal().Err(err).Msg("Failed to initialize verification helper")
+	}
 
 	// Start long polling in the background
 	syncCtx, cancelSync := context.WithCancel(ctx)
