@@ -96,9 +96,9 @@ func Connect(
 		cryptoHelper.Machine(),
 		verificationhelper.NewInMemoryVerificationStore(),
 		acceptAllCallbacks,
-		false,
-		false,
-		true,
+		/* supportsQRShow= */ false,
+		/* supportsQRScan= */ false,
+		/* supportsSAS= */ true,
 	)
 	acceptAllCallbacks.VerificationHelper = verificationHelper
 
