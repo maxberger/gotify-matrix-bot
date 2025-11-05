@@ -28,7 +28,7 @@ func (aavc *AcceptAllVerificationCallbacks) VerificationCancelled(ctx context.Co
 }
 
 // VerificationDone is called when the verification is done.
-func (aavc *AcceptAllVerificationCallbacks) VerificationDone(ctx context.Context, txnID id.VerificationTransactionID) {
+func (aavc *AcceptAllVerificationCallbacks) VerificationDone(ctx context.Context, txnID id.VerificationTransactionID, method event.VerificationMethod) {
 	log.Info().Str("txnID", txnID.String()).Msg("Verification done")
 }
 
