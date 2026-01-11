@@ -22,6 +22,7 @@ func MainLoop() {
 		config.Configuration.Matrix.Username,
 		config.Configuration.Matrix.MatrixDomain,
 		config.Configuration.Matrix.Password,
+		config.Configuration.Matrix.Token,
 		allowListAsRegexps,
 	)
 

@@ -20,6 +20,7 @@ type MatrixType struct {
 	MatrixDomain  string `yaml:"matrixDomain,omitempty"`
 	Username      string `yaml:"username,omitempty"`
 	Password      string `yaml:"password,omitempty"`
+	Token         string `yaml:"token,omitempty"`
 	RoomID        string `yaml:"roomID,omitempty"`
 }
 
@@ -54,7 +55,13 @@ func InitConfig() {
 }
 
 func ValidateConfig() {
-	checkValues(Configuration)
+	fatal, warn := checkValues(Configuration)
+	if fatal != "" {
+		log.Fatal().Msg(fatal)
+	}
+	if warn != "" {
+		log.Warn().Msg(warn)
+	}
 }
 
 func parseConfig(buf []byte) *Config {
@@ -101,35 +108,43 @@ func fixLoggingLevel(c *Config) {
 	}
 }
 
-func checkValues(config *Config) {
+func checkValues(config *Config) (fatal string, warn string) {
 
 	if config.Gotify.URL == "" {
-		log.Fatal().Msg("No gotify url specified.")
+		return "No gotify url specified.", ""
 	}
 
 	if config.Gotify.ApiToken == "" {
-		log.Fatal().Msg("No gotify api token specified.")
+		return "No gotify api token specified.", ""
 	}
 
 	if config.Matrix.HomeServerURL == "" {
-		log.Fatal().Msg("No matrix homeserver specified.")
+		return "No matrix homeserver url specified.", ""
 	}
 
-	if config.Matrix.Username == "" {
-		log.Fatal().Msg("No matrix username specified.")
-	}
+	if config.Matrix.Token == "" {
 
-	if config.Matrix.Password == "" {
-		log.Fatal().Msg("No matrix password specified.")
+		if config.Matrix.Username == "" {
+			return "No matrix username specified.", ""
+		}
+
+		if config.Matrix.Password == "" {
+			return "No matrix password specified.", ""
+		}
+
+	} else {
+		if config.Matrix.Username != "" || config.Matrix.Password != "" {
+			return "Matrix token specified along with username/password. Please only specify one authentication method.", ""
+		}
 	}
 
 	if config.Matrix.RoomID == "" {
-		log.Fatal().Msg("No matrix room id specified.")
+		return "No matrix room id specified.", ""
 	}
-
 	if config.Debug {
-		log.Warn().Msg("Using deprecated keyword 'debug' in config. Please use logging/level instead")
+		return "", "Using deprecated keyword 'debug' in config. Please use logging/level instead"
 	}
+	return "", ""
 }
 
 func DownloadAllowListAsRegexps(config *Config) ([]*regexp.Regexp, error) {

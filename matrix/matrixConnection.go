@@ -42,6 +42,7 @@ func Connect(
 	username string,
 	domain string,
 	password string,
+	token string,
 	downloadFromHostAllowlist []*regexp.Regexp,
 ) *MatrixState {
 	ctx := context.Background()
@@ -69,13 +70,21 @@ func Connect(
 		}
 	})
 
-	login := &mautrix.ReqLogin{
-		Type: mautrix.AuthTypePassword,
-		Identifier: mautrix.UserIdentifier{
-			Type: mautrix.IdentifierTypeUser,
-			User: username,
-		},
-		Password: password,
+	var login *mautrix.ReqLogin
+	if token == "" {
+		login = &mautrix.ReqLogin{
+			Type: mautrix.AuthTypePassword,
+			Identifier: mautrix.UserIdentifier{
+				Type: mautrix.IdentifierTypeUser,
+				User: username,
+			},
+			Password: password,
+		}
+	} else {
+		login = &mautrix.ReqLogin{
+			Type:  mautrix.AuthTypeToken,
+			Token: token,
+		}
 	}
 
 	cryptoHelper, err := cryptohelper.NewCryptoHelper(cli, []byte("gotify-matrix-client"), "cryptoStore.db")

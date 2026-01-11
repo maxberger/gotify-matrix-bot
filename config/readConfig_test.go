@@ -82,6 +82,34 @@ debug: true
 			expectedError: false,
 		},
 		{
+			name: "Valid config with token instead of username/password",
+			config: []byte(`
+gotify:
+  url: https://gotify.example.com
+  apiToken: testToken
+matrix:
+  homeserverURL: https://matrix.example.com
+  matrixDomain: example.com
+  token: testToken
+  roomID: "!roomid"
+`),
+			expected: &Config{
+				Gotify: GotifyType{
+					URL:      "wss://gotify.example.com",
+					ApiToken: "testToken"},
+				Matrix: MatrixType{
+					HomeServerURL: "https://matrix.example.com",
+					Token:         "testToken",
+					RoomID:        "!roomid",
+					MatrixDomain:  "example.com",
+				},
+				Logging: LoggingType{
+					Level: "info",
+				},
+			},
+			expectedError: false,
+		},
+		{
 			name: "Debug sets level if unset",
 			config: []byte(`
 debug: true
@@ -137,6 +165,89 @@ downloader:
 		t.Run(tc.name, func(t *testing.T) {
 			result := fixConfig(parseConfig(tc.config))
 			assert.DeepEqual(t, result, tc.expected)
+		})
+	}
+}
+
+func TestCheckValues(t *testing.T) {
+	testCases := []struct {
+		name          string
+		config        *Config
+		expectedError string
+		ExpectedWarn  string
+	}{
+		{
+			name: "Valid config",
+			config: &Config{
+				Gotify: GotifyType{
+					URL:      "https://gotify.example.com",
+					ApiToken: "testToken",
+				},
+				Matrix: MatrixType{
+					HomeServerURL: "https://matrix.example.com",
+					Username:      "testuser",
+					Password:      "testPassword",
+					RoomID:        "!roomid",
+				},
+			},
+			expectedError: "",
+			ExpectedWarn:  "",
+		},
+		{
+			name: "No Matrix username or token",
+			config: &Config{
+				Gotify: GotifyType{
+					URL:      "https://gotify.example.com",
+					ApiToken: "testToken",
+				},
+				Matrix: MatrixType{
+					HomeServerURL: "https://matrix.example.com",
+					RoomID:        "!roomid",
+				},
+			},
+			expectedError: "No matrix username specified.",
+			ExpectedWarn:  "",
+		},
+		{
+			name: "With token",
+			config: &Config{
+				Gotify: GotifyType{
+					URL:      "https://gotify.example.com",
+					ApiToken: "testToken",
+				},
+				Matrix: MatrixType{
+					HomeServerURL: "https://matrix.example.com",
+					Token:         "testToken",
+					RoomID:        "!roomid",
+				},
+			},
+			expectedError: "",
+			ExpectedWarn:  "",
+		},
+		{
+			name: "With username and password and token",
+			config: &Config{
+				Gotify: GotifyType{
+					URL:      "https://gotify.example.com",
+					ApiToken: "testToken",
+				},
+				Matrix: MatrixType{
+					HomeServerURL: "https://matrix.example.com",
+					Username:      "testuser",
+					Password:      "testPassword",
+					Token:         "testToken",
+					RoomID:        "!roomid",
+				},
+			},
+			expectedError: "Matrix token specified along with username/password. Please only specify one authentication method.",
+			ExpectedWarn:  "",
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			err, warn := checkValues(tc.config)
+			assert.Equal(t, err, tc.expectedError)
+			assert.Equal(t, warn, tc.ExpectedWarn)
 		})
 	}
 }

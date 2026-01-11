@@ -12,6 +12,8 @@ matrix:
   username: "botname"
   # Password for the user
   password: "dsfjgkldsfjgkl"
+  # Alternatively, you can use an access token instead of username/password
+  token: ""
   roomID: "!sdjfklsdjlf:yourdomain.com"
 logging:
   # can be DEBUG, INFO, WARN, ERROR
