@@ -25,6 +25,12 @@ It supports both plain text and markdown gotify messages. They are rendered as h
     go build
     ```
 
+4. **Test the application:**
+
+   ```bash
+   go test ./...
+   ```
+
 4. **Run the application:**
 
     ```bash
