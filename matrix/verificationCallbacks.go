@@ -13,6 +13,9 @@ type AcceptAllVerificationCallbacks struct {
 	VerificationHelper *verificationhelper.VerificationHelper
 }
 
+var _ verificationhelper.RequiredCallbacks = (*AcceptAllVerificationCallbacks)(nil)
+var _ verificationhelper.ShowSASCallbacks = (*AcceptAllVerificationCallbacks)(nil)
+
 func (aavc *AcceptAllVerificationCallbacks) VerificationRequested(ctx context.Context, txnID id.VerificationTransactionID, from id.UserID, fromDevice id.DeviceID) {
 	log.Info().Str("txnID", txnID.String()).Msg("Verification requested, rejecting...")
 	aavc.VerificationHelper.CancelVerification(ctx, txnID, event.VerificationCancelCodeUser, "Verification is not yet supported")
@@ -28,8 +31,8 @@ func (aavc *AcceptAllVerificationCallbacks) VerificationCancelled(ctx context.Co
 }
 
 // VerificationDone is called when the verification is done.
-func (aavc *AcceptAllVerificationCallbacks) VerificationDone(ctx context.Context, txnID id.VerificationTransactionID) {
-	log.Info().Str("txnID", txnID.String()).Msg("Verification done")
+func (aavc *AcceptAllVerificationCallbacks) VerificationDone(ctx context.Context, txnID id.VerificationTransactionID, method event.VerificationMethod) {
+	log.Info().Str("txnID", txnID.String()).Str("method", string(method)).Msg("Verification done")
 }
 
 func (aavc *AcceptAllVerificationCallbacks) ShowSAS(ctx context.Context, txnID id.VerificationTransactionID, emojis []rune, emojiDescriptions []string, decimals []int) {
