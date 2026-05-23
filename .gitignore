@@ -4,3 +4,4 @@ cryptoStore.gob
 cryptoStore.db*
 gotify_matrix_bot
 config.generated.yaml
+crossSigningSeeds.json

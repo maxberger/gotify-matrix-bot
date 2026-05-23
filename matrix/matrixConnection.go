@@ -2,6 +2,8 @@ package matrix
 
 import (
 	"context"
+	"encoding/json"
+	"io"
 	"net/http"
 	"net/url"
 	"os"
@@ -52,6 +54,14 @@ func Connect(
 		log.Fatal().Err(err).Msg("Failed to create matrix client")
 	}
 
+	// Intercept /keys/signatures/upload request to mock successful signature upload
+	// since publishing cross-signing keys is blocked under MAS/OIDC homeservers.
+	transport := cli.Client.Transport
+	if transport == nil {
+		transport = http.DefaultTransport
+	}
+	cli.Client.Transport = &signatureInterceptorRoundTripper{underlying: transport}
+
 	syncer := cli.Syncer.(*mautrix.DefaultSyncer)
 	syncer.OnEventType(event.StateMember, func(ctx context.Context, evt *event.Event) {
 		if evt.GetStateKey() == cli.UserID.String() && evt.Content.AsMember().Membership == event.MembershipInvite {
@@ -68,6 +78,13 @@ func Connect(
 					Msg("Failed to join room after invite")
 			}
 		}
+	})
+
+	syncer.OnEvent(func(ctx context.Context, evt *event.Event) {
+		if FilterOwnVerificationEvent(evt, cli.UserID) {
+			return
+		}
+		RewriteInRoomVerificationEventID(evt)
 	})
 
 	var login *mautrix.ReqLogin
@@ -98,6 +115,14 @@ func Connect(
 		log.Fatal().Err(err).Msg("Login failed.")
 	}
 	cli.Crypto = cryptoHelper
+
+	// Load or bootstrap cross-signing keys.
+	// The private cross-signing keys are required for the SAS verification
+	// flow to complete the trust-signing step (signing the other user's
+	// master key). mautrix-go only holds them in-memory, so we persist the
+	// seeds to a local file to survive restarts.
+	machine := cryptoHelper.Machine()
+	loadOrBootstrapCrossSigningKeys(ctx, machine, password)
 
 	acceptAllCallbacks := &AcceptAllVerificationCallbacks{}
 	verificationHelper := verificationhelper.NewVerificationHelper(
@@ -244,4 +269,192 @@ func downloadAndUploadImage(url string, state *MatrixState) string {
 	}
 	newUrl := resp.ContentURI.CUString()
 	return string(newUrl)
+}
+
+func RewriteInRoomVerificationEventID(evt *event.Event) {
+	if relatable, ok := evt.Content.Parsed.(event.Relatable); ok {
+		if rel := relatable.GetRelatesTo(); rel != nil && rel.Type == event.RelReference && rel.EventID != "" {
+			evt.ID = rel.EventID
+		}
+	}
+}
+
+func FilterOwnVerificationEvent(evt *event.Event, ownUserID id.UserID) bool {
+	if evt.Sender == ownUserID {
+		if strings.HasPrefix(evt.Type.Type, "m.key.verification.") {
+			evt.Type = event.Type{Type: "ignored.verification", Class: event.MessageEventType}
+			return true
+		}
+	}
+	return false
+}
+
+const crossSigningSeedsFile = "crossSigningSeeds.json"
+
+func loadOrBootstrapCrossSigningKeys(ctx context.Context, machine *crypto.OlmMachine, password string) {
+	// Try loading persisted seeds from file first.
+	seeds, err := loadCrossSigningSeeds()
+	if err == nil {
+		if err := machine.ImportCrossSigningKeys(seeds); err != nil {
+			log.Error().Err(err).Msg("Failed to import cross-signing keys from file")
+		} else {
+			log.Info().Msg("Cross-signing keys loaded from local file")
+			return
+		}
+	}
+
+	// No persisted seeds — generate new keys.
+	if machine.CrossSigningKeys != nil {
+		return
+	}
+
+	if password == "" {
+		log.Warn().Msg("Cross-signing keys not found and no password available to bootstrap them. SAS verification will fail at the trust-signing step.")
+		return
+	}
+
+	log.Info().Msg("Cross-signing keys not found, bootstrapping...")
+
+	var keysCache *crypto.CrossSigningKeysCache
+	var bootstrapErr error
+	var recoveryKey string
+
+	// Custom UIA callback that supports both m.login.dummy and robust m.login.password (with identifier object).
+	uiaCallback := func(uiResp *mautrix.RespUserInteractive) interface{} {
+		flowsJSON, _ := json.Marshal(uiResp.Flows)
+		paramsJSON, _ := json.Marshal(uiResp.Params)
+		log.Debug().
+			Str("session", uiResp.Session).
+			RawJSON("flows", flowsJSON).
+			RawJSON("params", paramsJSON).
+			Str("errcode", uiResp.ErrCode).
+			Str("error", uiResp.Error).
+			Msg("UIA challenge received from homeserver")
+
+		if uiResp.HasSingleStageFlow(mautrix.AuthTypeDummy) {
+			log.Debug().Msg("Responding to UIA with m.login.dummy")
+			return &mautrix.BaseAuthData{
+				Type:    mautrix.AuthTypeDummy,
+				Session: uiResp.Session,
+			}
+		}
+
+		localpart := machine.Client.UserID.Localpart()
+		fullMXID := machine.Client.UserID.String()
+		log.Debug().
+			Str("user_localpart", localpart).
+			Str("user_mxid", fullMXID).
+			Msg("Responding to UIA with m.login.password")
+
+		type UIAIdentifier struct {
+			Type string `json:"type"`
+			User string `json:"user"`
+		}
+		type UIAAuthPassword struct {
+			mautrix.BaseAuthData
+			User       string        `json:"user,omitempty"`
+			Identifier UIAIdentifier `json:"identifier"`
+			Password   string        `json:"password"`
+		}
+
+		return &UIAAuthPassword{
+			BaseAuthData: mautrix.BaseAuthData{
+				Type:    mautrix.AuthTypePassword,
+				Session: uiResp.Session,
+			},
+			User: localpart,
+			Identifier: UIAIdentifier{
+				Type: "m.id.user",
+				User: fullMXID,
+			},
+			Password: password,
+		}
+	}
+
+	recoveryKey, keysCache, bootstrapErr = machine.GenerateAndUploadCrossSigningKeys(ctx, uiaCallback, "")
+	if bootstrapErr != nil {
+		log.Warn().Err(bootstrapErr).Msg("Failed to fully bootstrap cross-signing keys on the server (UIA or SSSS failure)")
+		if keysCache == nil {
+			log.Info().Msg("Attempting to generate cross-signing keys locally as fallback...")
+			keysCache, err = machine.GenerateCrossSigningKeys()
+			if err != nil {
+				log.Error().Err(err).Msg("Failed to generate cross-signing keys locally")
+				return
+			}
+		} else {
+			log.Info().Msg("Using generated cross-signing keys from failed bootstrap attempt")
+		}
+	} else {
+		log.Info().Str("recovery_key", recoveryKey).Msg("Cross-signing keys bootstrapped successfully on the server. Save the recovery key!")
+	}
+
+	// Persist the private seeds so they survive restarts.
+	exportedSeeds := crypto.CrossSigningSeeds{
+		MasterKey:      keysCache.MasterKey.Seed(),
+		SelfSigningKey: keysCache.SelfSigningKey.Seed(),
+		UserSigningKey: keysCache.UserSigningKey.Seed(),
+	}
+	if err := saveCrossSigningSeeds(exportedSeeds); err != nil {
+		log.Error().Err(err).Msg("Failed to save cross-signing seeds to file")
+	}
+
+	// Import the keys so they are loaded into machine.CrossSigningKeys and machine.crossSigningPubkeys
+	if err := machine.ImportCrossSigningKeys(exportedSeeds); err != nil {
+		log.Error().Err(err).Msg("Failed to import cross-signing keys")
+		return
+	}
+
+	if bootstrapErr == nil {
+		if err := machine.SignOwnDevice(ctx, machine.OwnIdentity()); err != nil {
+			log.Error().Err(err).Msg("Failed to sign own device with self-signing key")
+		}
+		if err := machine.SignOwnMasterKey(ctx); err != nil {
+			log.Error().Err(err).Msg("Failed to sign own master key")
+		}
+	} else {
+		log.Warn().Msg("Skipping own device/master key signature upload because cross-signing key publishing failed.")
+	}
+}
+
+func saveCrossSigningSeeds(seeds crypto.CrossSigningSeeds) error {
+	data, err := json.Marshal(seeds)
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(crossSigningSeedsFile, data, 0600)
+}
+
+func loadCrossSigningSeeds() (crypto.CrossSigningSeeds, error) {
+	var seeds crypto.CrossSigningSeeds
+	data, err := os.ReadFile(crossSigningSeedsFile)
+	if err != nil {
+		return seeds, err
+	}
+	err = json.Unmarshal(data, &seeds)
+	return seeds, err
+}
+
+type signatureInterceptorRoundTripper struct {
+	underlying http.RoundTripper
+}
+
+func (rt *signatureInterceptorRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
+	if req.Method == http.MethodPost && strings.Contains(req.URL.Path, "/keys/signatures/upload") {
+		log.Info().Msg("Intercepted /keys/signatures/upload request, mocking successful response")
+		respBody := `{"failures":{}}`
+		resp := &http.Response{
+			Status:        "200 OK",
+			StatusCode:    200,
+			Proto:         req.Proto,
+			ProtoMajor:    req.ProtoMajor,
+			ProtoMinor:    req.ProtoMinor,
+			Body:          io.NopCloser(strings.NewReader(respBody)),
+			ContentLength: int64(len(respBody)),
+			Header:        make(http.Header),
+			Request:       req,
+		}
+		resp.Header.Set("Content-Type", "application/json")
+		return resp, nil
+	}
+	return rt.underlying.RoundTrip(req)
 }
