@@ -112,7 +112,46 @@ func Connect(
 	log.Debug().Msg("Logging in...")
 	err = cryptoHelper.Init(ctx)
 	if err != nil {
-		log.Fatal().Err(err).Msg("Login failed.")
+		errStr := err.Error()
+		if strings.Contains(errStr, "keys seem to have disappeared from the server") ||
+			strings.Contains(errStr, "mismatching identity key on server") ||
+			strings.Contains(errStr, "not marked as shared, but there are keys on the server") {
+			log.Warn().Err(err).Msg("Crypto store issue detected (keys disappeared, mismatched, or state inconsistent). Resetting local crypto store...")
+
+			// Close helper before deleting files to release any file locks
+			_ = cryptoHelper.Close()
+
+			// Remove database files and seeds file to trigger a full clean sync/re-creation
+			_ = os.Remove("cryptoStore.db")
+			_ = os.Remove("cryptoStore.db-journal")
+			_ = os.Remove("cryptoStore.db-wal")
+			_ = os.Remove("cryptoStore.db-shm")
+			_ = os.Remove("crossSigningSeeds.json")
+
+			// Clear client state store and credentials to force login and re-creation
+			cli.StateStore = nil
+			cli.Store = nil
+			cli.AccessToken = ""
+			cli.DeviceID = ""
+			if login != nil {
+				login.DeviceID = ""
+			}
+
+			// Re-create CryptoHelper
+			cryptoHelper, err = cryptohelper.NewCryptoHelper(cli, []byte("gotify-matrix-client"), "cryptoStore.db")
+			if err != nil {
+				log.Fatal().Err(err).Msg("Could not create Crypto Helper after reset")
+			}
+			cryptoHelper.LoginAs = login
+
+			log.Info().Msg("Retrying login with clean crypto store...")
+			err = cryptoHelper.Init(ctx)
+			if err != nil {
+				log.Fatal().Err(err).Msg("Login failed after resetting crypto store.")
+			}
+		} else {
+			log.Fatal().Err(err).Msg("Login failed.")
+		}
 	}
 	cli.Crypto = cryptoHelper
 
